@@ -8,7 +8,6 @@
     --success: #00ba7c;
 }
 
-/* Evitamos el desplazamiento lateral molesto */
 html, body {
     background-color: var(--bg-color);
     color: var(--text-main);
@@ -16,23 +15,21 @@ html, body {
     margin: 0;
     padding: 0;
     width: 100%;
-    overflow-x: hidden; 
+    overflow-x: hidden;
     display: flex;
     justify-content: center;
 }
 
-/* --- CONTENEDOR PRINCIPAL --- */
 main {
     width: 100%;
     max-width: 600px;
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box; /* Crucial para que el padding no sume al ancho */
+    box-sizing: border-box;
 }
 
+/* HEADER Y MENU BURGER */
 header {
     padding: 15px;
     border-bottom: 1px solid var(--border-color);
@@ -43,140 +40,80 @@ header {
     z-index: 100;
 }
 
-header h1 {
-    font-size: 20px;
-    margin: 0;
-}
-
-#form-area {
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-textarea {
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: var(--text-main);
-    font-size: 18px; 
-    resize: none;
-    outline: none;
-    min-height: 80px;
-    margin-bottom: 10px;
-    font-family: inherit;
-    box-sizing: border-box;
-}
-
-/* AJUSTE PARA EL CAPTCHA (No más "mocho") */
-#captcha-container {
-    margin: 10px 0;
-    display: flex;
-    justify-content: center;
-    max-width: 100%;
-    overflow: hidden;
-}
-
-/* Si el captcha sigue siendo muy grande en móviles pequeños */
-@media (max-width: 380px) {
-    #captcha-container {
-        transform: scale(0.85);
-        transform-origin: center;
-    }
-}
-
-.form-footer {
-    display: flex;
-    justify-content: flex-end;
-}
-
-#enviarBtn {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 10px 25px;
-    border-radius: 9999px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-#enviarBtn:hover {
-    background-color: #1a8cd8;
-}
-
-/* --- CARDS DE CHISMES --- */
-.card {
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-    word-wrap: break-word; /* Evita que textos largos rompan el layout */
-}
-
-.footer-card {
+.header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 10px;
-    flex-wrap: wrap; /* Para que la fecha y botones no se encimen */
-    gap: 10px;
 }
 
-.actions { 
-    display: flex; 
-    gap: 25px; 
-}
+header h1 { font-size: 20px; margin: 0; }
 
-.like-btn, .dislike-btn {
+.menu-btn {
     background: transparent;
     border: none;
-    color: var(--text-dim);
+    color: var(--text-main);
+    font-size: 24px;
     cursor: pointer;
-    transition: 0.2s;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
 }
 
-.like-btn:hover:not(:disabled) { color: var(--success); }
-.dislike-btn:hover:not(:disabled) { color: var(--danger); }
-
-button:disabled {
-    cursor: default;
-    opacity: 0.5;
-    filter: grayscale(1);
-}
-
-/* --- MODAL --- */
-.modal-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
+.nav-menu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
     background: #161b22;
-    padding: 25px;
-    border-radius: 15px;
-    max-width: 350px;
-    width: 85%;
-    text-align: center;
-    border: 1px solid var(--border-color);
+    margin: 0 -15px;
+    padding: 0 15px;
 }
 
-/* --- MEDIA QUERIES --- */
-@media (max-width: 600px) {
-    main {
-        border-left: none;
-        border-right: none;
-    }
-    
-    header h1 {
-        font-size: 18px;
-    }
+.nav-menu.active {
+    max-height: 150px;
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+}
 
-    .actions {
-        gap: 20px;
-    }
+.btn-link {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+}
+
+/* FORMULARIO Y CARDS */
+#form-area { padding: 15px; border-bottom: 1px solid var(--border-color); }
+textarea {
+    width: 100%; background: transparent; border: none; color: var(--text-main);
+    font-size: 18px; resize: none; outline: none; min-height: 80px; box-sizing: border-box;
+}
+
+#captcha-container { margin: 10px 0; display: flex; justify-content: center; overflow: hidden; }
+
+#enviarBtn {
+    background: var(--accent); color: white; border: none; padding: 10px 25px;
+    border-radius: 9999px; font-weight: bold; cursor: pointer;
+}
+
+.card { padding: 15px; border-bottom: 1px solid var(--border-color); word-wrap: break-word; }
+.footer-card { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.actions { display: flex; gap: 25px; }
+
+.like-btn, .dislike-btn {
+    background: transparent; border: none; color: var(--text-dim); cursor: pointer;
+    font-size: 14px; display: flex; align-items: center; gap: 5px;
+}
+
+/* MODAL */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-content {
+    background: #161b22; padding: 25px; border-radius: 15px; width: 85%; max-width: 350px; text-align: center; border: 1px solid var(--border-color);
+}
+
+@media (max-width: 600px) {
+    main { border-left: none; border-right: none; }
+    header h1 { font-size: 18px; }
 }
