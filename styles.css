@@ -17,12 +17,15 @@ body {
     justify-content: center;
 }
 
+/* --- CONTENEDOR PRINCIPAL RESPONSIVO --- */
 main {
     width: 100%;
     max-width: 600px;
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
 
 header {
@@ -35,6 +38,11 @@ header {
     z-index: 10;
 }
 
+header h1 {
+    font-size: 20px;
+    margin: 0;
+}
+
 #form-area {
     padding: 15px;
     border-bottom: 1px solid var(--border-color);
@@ -45,16 +53,18 @@ textarea {
     background: transparent;
     border: none;
     color: var(--text-main);
-    font-size: 18px;
+    font-size: 18px; /* Tamaño ideal para evitar zoom en iOS */
     resize: none;
     outline: none;
     min-height: 80px;
     margin-bottom: 10px;
+    font-family: inherit;
 }
 
-/* Captcha centrado */
 #captcha-container {
     margin: 10px 0;
+    display: flex;
+    justify-content: center; /* Centra el captcha en móvil */
 }
 
 .form-footer {
@@ -70,6 +80,11 @@ textarea {
     border-radius: 9999px;
     font-weight: bold;
     cursor: pointer;
+    transition: 0.2s;
+}
+
+#enviarBtn:hover {
+    background-color: #1a8cd8;
 }
 
 .card {
@@ -84,7 +99,10 @@ textarea {
     margin-top: 10px;
 }
 
-.actions { display: flex; gap: 30px; }
+.actions { 
+    display: flex; 
+    gap: 30px; 
+}
 
 .like-btn, .dislike-btn {
     background: transparent;
@@ -93,19 +111,21 @@ textarea {
     cursor: pointer;
     transition: 0.2s;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .like-btn:hover:not(:disabled) { color: var(--success); }
 .dislike-btn:hover:not(:disabled) { color: var(--danger); }
 
-/* Botón bloqueado tras votar */
 button:disabled {
     cursor: default;
     opacity: 0.5;
     filter: grayscale(1);
 }
 
-/* Modal */
+/* --- MODAL ADAPTATIVO --- */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -119,6 +139,7 @@ button:disabled {
     padding: 25px;
     border-radius: 15px;
     max-width: 350px;
+    width: 85%; /* Responsivo para móvil */
     text-align: center;
     border: 1px solid var(--border-color);
 }
@@ -126,3 +147,23 @@ button:disabled {
 .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
 .btn-primary { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 20px; flex: 1; cursor: pointer; font-weight: bold; }
 .btn-secondary { background: transparent; color: var(--text-dim); border: 1px solid var(--text-dim); padding: 10px; border-radius: 20px; flex: 1; cursor: pointer; }
+
+/* --- MEDIA QUERIES (EL TOQUE MÁGICO) --- */
+@media (max-width: 600px) {
+    main {
+        border-left: none;
+        border-right: none;
+    }
+    
+    .actions {
+        gap: 20px; /* Menos espacio en móvil para evitar desbordes */
+    }
+
+    header {
+        padding: 10px 15px;
+    }
+
+    header h1 {
+        font-size: 18px;
+    }
+}
