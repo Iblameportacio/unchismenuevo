@@ -1,36 +1,276 @@
-/* ... (Tus estilos anteriores se mantienen) ... */
-
-.comunidades-nav {
-    display: flex;
-    gap: 10px;
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-    scrollbar-width: none; /* Oculta scroll en Firefox */
+:root {
+    --bg-color: #000000;
+    --border-color: #2f3336;
+    --text-main: #e7e9ea;
+    --text-dim: #71767b;
+    --accent-red: #8b0000; /* Rojo Sangre */
+    --accent-hover: #b30000;
+    --card-bg: #000000;
+    --nav-bg: rgba(0, 0, 0, 0.85);
 }
 
-.comunidades-nav::-webkit-scrollbar { display: none; } /* Oculta scroll en Chrome */
+/* --- BASE --- */
+html, body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+}
+
+/* --- HEADER --- */
+header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+header h1 { 
+    font-size: 22px; 
+    margin: 0; 
+    letter-spacing: -0.5px;
+}
+
+header h1 .barbaro {
+    color: var(--accent-red);
+}
+
+.warning { 
+    color: var(--text-dim); 
+    font-size: 12px; 
+    margin-top: 4px; 
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* --- LAYOUT --- */
+.layout-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 1250px;
+    margin: 0 auto;
+}
+
+main {
+    width: 100%;
+    max-width: 600px;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    min-height: 100vh;
+}
+
+/* --- NAVEGACIÓN COMUNIDADES --- */
+.comunidades-nav {
+    display: flex;
+    gap: 12px;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+.comunidades-nav::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
 .tab-btn {
     background: #161b22;
     color: var(--text-dim);
     border: 1px solid var(--border-color);
-    padding: 8px 16px;
+    padding: 8px 18px;
     border-radius: 20px;
     cursor: pointer;
     white-space: nowrap;
+    font-size: 14px;
     font-weight: 600;
-    transition: 0.2s;
+    transition: all 0.2s ease;
 }
 
 .tab-btn.active {
     background: var(--accent-red);
     color: white;
     border-color: transparent;
-    box-shadow: 0 0 10px rgba(139, 0, 0, 0.3);
+    box-shadow: 0 0 12px rgba(139, 0, 0, 0.4);
+}
+
+/* --- ÁREA DE PUBLICACIÓN --- */
+#form-area { 
+    padding: 15px; 
+    border-bottom: 8px solid #161b22; 
+}
+
+textarea {
+    width: 100%; 
+    background: transparent; 
+    border: none; 
+    color: var(--text-main);
+    font-size: 19px; 
+    resize: none; 
+    outline: none; 
+    min-height: 110px;
+    margin-bottom: 10px;
+}
+
+/* --- BOTONES Y ACCIONES --- */
+.form-footer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+    padding: 10px 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: 0.2s;
+}
+
+.btn-secondary:hover {
+    background: rgba(139, 0, 0, 0.1);
+}
+
+#enviarBtn {
+    background: var(--accent-red);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 9999px;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s;
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+}
+
+#enviarBtn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+}
+
+#enviarBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- FEED / CARDS --- */
+.card { 
+    padding: 15px; 
+    border-bottom: 1px solid var(--border-color); 
+    word-wrap: break-word;
+    transition: background 0.2s;
+}
+
+.card:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.card p {
+    font-size: 16px;
+    line-height: 1.4;
+    margin: 0 0 10px 0;
 }
 
 .card-img {
-    max-height: 400px;
+    width: 100%;
+    max-height: 450px;
     object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin: 10px 0;
+}
+
+.footer-card { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-top: 12px; 
+}
+
+.footer-card small {
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.actions { display: flex; gap: 15px; }
+
+.like-btn, .dislike-btn { 
+    background: #161b22; 
+    border: 1px solid var(--border-color);
+    color: var(--text-dim); 
+    padding: 6px 12px;
+    border-radius: 15px;
+    cursor: pointer; 
+    display: flex; 
+    gap: 6px; 
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.like-btn:hover { border-color: var(--success); color: var(--success); }
+.dislike-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+
+/* --- PUBLICIDAD --- */
+.ads-side {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    padding-top: 20px;
+}
+
+.ad-placeholder {
+    width: 160px;
+    height: 600px;
+    background: #080808;
+    border: 1px dashed var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: 10px;
+    position: sticky;
+    top: 100px;
+}
+
+/* --- MODAL --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+
+.modal-content {
+    background: #161b22; 
+    padding: 30px; 
+    border-radius: 24px; 
+    max-width: 320px; 
+    text-align: center; 
+    border: 1px solid var(--border-color);
+}
+
+.btn-primary {
+    background: var(--accent-red);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 9999px;
+    width: 100%;
+    font-weight: bold;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 1000px) {
+    .ads-side { display: none; }
+    main { border: none; }
 }
