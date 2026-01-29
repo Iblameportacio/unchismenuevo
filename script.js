@@ -6,6 +6,13 @@ const input = document.getElementById('secretoInput');
 const btn = document.getElementById('enviarBtn');
 const container = document.getElementById('secretos-container');
 
+// LOGICA MENU BURGER
+const menuToggle = document.getElementById('menu-toggle');
+const sideMenu = document.getElementById('side-menu');
+const verPoliticasBtn = document.getElementById('ver-politicas-btn');
+
+menuToggle.onclick = () => sideMenu.classList.toggle('active');
+
 // MODAL
 const modal = document.getElementById('modal-politicas');
 const btnAceptar = document.getElementById('btn-aceptar');
@@ -20,53 +27,44 @@ btnAceptar.onclick = () => {
     modal.style.display = 'none';
 };
 
-btnRechazar.onclick = () => {
-    window.location.href = "https://google.com";
+btnRechazar.onclick = () => window.location.href = "https://google.com";
+
+verPoliticasBtn.onclick = () => {
+    modal.style.display = 'flex';
+    sideMenu.classList.remove('active');
 };
 
-// REACCIONES (CON BLOQUEO INFINITO)
+// REACCIONES
 async function reaccionar(id, valorActual, columna) {
-    // Verificar si ya votó por este chisme
-    if (localStorage.getItem(`voto_${id}`)) {
-        return alert("Ya reaccionaste a este chisme, broski.");
-    }
+    if (localStorage.getItem(`voto_${id}`)) return alert("Ya reaccionaste, broski.");
 
     const { error } = await _supabase
         .from('secretos')
         .update({ [columna]: (valorActual || 0) + 1 })
         .eq('id', id);
 
-    if (error) {
-        console.error(error);
-    } else {
-        // Guardar voto en el navegador
+    if (!error) {
         localStorage.setItem(`voto_${id}`, 'true');
-        await leerSecretos(); 
+        await leerSecretos();
     }
 }
 
-// ENVIAR (CON CAPTCHA)
+// ENVIAR
 async function enviarSecreto() {
     const texto = input.value.trim();
-    
-    // Verificar Captcha de Cloudflare
     const captchaRes = turnstile.getResponse();
-    if (!captchaRes) {
-        return alert("Completa el captcha para demostrar que no eres un bot.");
-    }
-
-    if(!texto) return alert("Escribe algo...");
+    
+    if (!captchaRes) return alert("Completa el captcha.");
+    if (!texto) return alert("Escribe algo...");
 
     const { error } = await _supabase
         .from('secretos')
         .insert([{ contenido: texto, likes: 0, dislikes: 0 }]);
 
-    if (error) {
-        console.error(error);
-    } else { 
-        input.value = ""; 
-        turnstile.reset(); // Resetear para el siguiente
-        await leerSecretos(); 
+    if (!error) {
+        input.value = "";
+        turnstile.reset();
+        await leerSecretos();
     }
 }
 
@@ -82,16 +80,11 @@ async function leerSecretos() {
                     <div class="footer-card">
                         <small>${new Date(s.created_at).toLocaleString()}</small>
                         <div class="actions">
-                            <button class="like-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.likes}, 'likes')">
-                                🔥 ${s.likes || 0}
-                            </button>
-                            <button class="dislike-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.dislikes}, 'dislikes')">
-                                💩 ${s.dislikes || 0}
-                            </button>
+                            <button class="like-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.likes}, 'likes')">🔥 ${s.likes || 0}</button>
+                            <button class="dislike-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.dislikes}, 'dislikes')">💩 ${s.dislikes || 0}</button>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }).join('');
     }
 }
