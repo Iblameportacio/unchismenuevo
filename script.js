@@ -1,5 +1,7 @@
 const SUPABASE_URL = "https://ksqrflkejlpojqhyktwf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uFWqkx-ygAhFBS5Z_va8tg_qXi7z1QV";
+
+// Aquí estaba el lío: usamos _supabase para no chocar con la librería
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const input = document.getElementById('secretoInput');
@@ -12,10 +14,8 @@ const bannedWords = ["pornografía infantil", "cp", "enlace-peligroso.com"];
 async function enviarSecreto() {
     const texto = input.value.trim();
 
-    // Validar que no esté vacío
     if(!texto) return alert("Escribe algo, no seas tímido.");
 
-    // Filtro de palabras prohibidas e links
     const tieneIlegal = bannedWords.some(palabra => texto.toLowerCase().includes(palabra));
     const tieneLink = /(http|https|www)/i.test(texto);
 
@@ -23,24 +23,30 @@ async function enviarSecreto() {
         return alert("Contenido prohibido o links no permitidos.");
     }
 
-    // Enviar a Supabase (Tabla: secretos, Columna: contenido)
-    const { data, error } = await supabase
+    // Cambiado supabase por _supabase
+    const { data, error } = await _supabase
         .from('secretos')
         .insert([{ contenido: texto }]);
 
     if (error) {
-        console.error(error);
+        console.error("Error al enviar:", error);
+        alert("Hubo un error al publicar. Revisa las políticas de Supabase.");
     } else {
         input.value = "";
-        leerSecretos(); // Recargar lista
+        leerSecretos(); 
     }
 }
 
 async function leerSecretos() {
-    const { data: secretos, error } = await supabase
+    // Cambiado supabase por _supabase
+    const { data: secretos, error } = await _supabase
         .from('secretos')
         .select('*')
         .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error al leer:", error);
+    }
 
     if (secretos) {
         container.innerHTML = secretos.map(s => `
@@ -52,5 +58,7 @@ async function leerSecretos() {
     }
 }
 
+btn.onclick = enviarSecreto;
+leerSecretos();
 btn.onclick = enviarSecreto;
 leerSecretos();
