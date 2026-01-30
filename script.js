@@ -8,6 +8,7 @@ const container = document.getElementById('secretos-container');
 const fotoInput = document.getElementById('fotoInput');
 
 let comunidadActual = 'general';
+let ultimaPublicacion = 0; // Para el control de spam (enfriamiento)
 
 // --- MODAL ---
 const modal = document.getElementById('modal-politicas');
@@ -25,8 +26,7 @@ btnAceptar.onclick = () => {
 
 btnRechazar.onclick = () => window.location.href = "https://google.com";
 
-// --- SEGURIDAD: FUNCIÓN ANTI-HACKERS ---
-// Esta función convierte <script> en texto inofensivo
+// --- SEGURIDAD: ANTI-XSS ---
 function escaparHTML(str) {
     if (!str) return "";
     const div = document.createElement('div');
@@ -54,7 +54,7 @@ async function cambiarComunidad(cat) {
     await leerSecretos();
 }
 
-// --- COMPRESIÓN ---
+// --- COMPRESIÓN DE IMAGEN ---
 async function comprimirImagen(archivo) {
     return new Promise((resolve) => {
         const reader = new FileReader();
@@ -77,27 +77,48 @@ async function comprimirImagen(archivo) {
     });
 }
 
-// --- REACCIONES ---
-async function reaccionar(id, valorActual, columna) {
+// --- REACCIONES BLINDADAS (Usa la función RPC del Back-end) ---
+async function reaccionar(id, columna) {
     if (localStorage.getItem(`voto_${id}`)) return alert("Ya reaccionaste, broski.");
-    const { error } = await _supabase.from('secretos').update({ [columna]: (valorActual || 0) + 1 }).eq('id', id);
+    
+    // Llamamos a la función del servidor para que el hacker no pueda enviar números locos
+    const { error } = await _supabase.rpc('incrementar_reaccion', { 
+        row_id: id, 
+        columna_nombre: columna 
+    });
+
     if (!error) {
         localStorage.setItem(`voto_${id}`, 'true');
         await leerSecretos();
+    } else {
+        console.error("Error en reacción:", error);
     }
 }
 
-// --- ENVIAR ---
+// --- ENVIAR (CON TODAS LAS VALIDACIONES) ---
 async function enviarSecreto() {
+    const ahora = Date.now();
     const texto = input.value.trim();
     const captchaRes = turnstile.getResponse();
     const file = fotoInput.files[0];
-    
-    if (!captchaRes) return alert("Completa el captcha.");
+
+    // 1. Validación de tiempo (Anti-Spam)
+    if (ahora - ultimaPublicacion < 10000) {
+        return alert("¡Tranquilo broski! Espera 10 segundos entre mensajes.");
+    }
+
+    // 2. Validación de tamaño (Back-end fallback)
+    if (texto.length > 1000) {
+        return alert("El mensaje es muy largo (máximo 1000 caracteres).");
+    }
+
+    // 3. Captcha obligatorio
+    if (!captchaRes) return alert("Por favor, completa el captcha.");
+
     if (!texto && !file) return alert("Escribe algo...");
 
     btn.disabled = true;
-    btn.innerText = "Enviando...";
+    btn.innerText = "Publicando...";
     let urlFoto = null;
 
     try {
@@ -123,11 +144,23 @@ async function enviarSecreto() {
             input.value = "";
             fotoInput.value = "";
             document.getElementById('preview-container').style.display = 'none';
+            ultimaPublicacion = ahora; // Reset del cooldown
+            
+            // RESET DEL CAPTCHA (Para que no lo reutilicen)
             turnstile.reset();
+            
             await leerSecretos();
+        } else {
+            alert("Error al enviar. Quizás el mensaje es muy largo.");
+            turnstile.reset();
         }
-    } catch (e) { console.error(e); } 
-    finally { btn.disabled = false; btn.innerText = "Publicar"; }
+    } catch (e) { 
+        console.error(e); 
+        turnstile.reset(); 
+    } finally { 
+        btn.disabled = false; 
+        btn.innerText = "Publicar"; 
+    }
 }
 
 function cargarAds() {
@@ -154,8 +187,6 @@ async function leerSecretos() {
         secretos.forEach((s, index) => {
             const yaVoto = localStorage.getItem(`voto_${s.id}`);
             const imgHtml = s.imagen_url ? `<img src="${s.imagen_url}" class="card-img" style="width:100%; border-radius:8px; margin:10px 0;">` : "";
-            
-            // ESCAPAMOS EL CONTENIDO ANTES DE MOSTRARLO
             const contenidoSeguro = escaparHTML(s.contenido);
 
             htmlFinal += `
@@ -165,8 +196,8 @@ async function leerSecretos() {
                     <div class="footer-card">
                         <small>${new Date(s.created_at).toLocaleString()}</small>
                         <div class="actions">
-                            <button class="like-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.likes}, 'likes')">🔥 ${s.likes || 0}</button>
-                            <button class="dislike-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, ${s.dislikes}, 'dislikes')">💩 ${s.dislikes || 0}</button>
+                            <button class="like-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, 'likes')">🔥 ${s.likes || 0}</button>
+                            <button class="dislike-btn" ${yaVoto ? 'disabled' : ''} onclick="reaccionar(${s.id}, 'dislikes')">💩 ${s.dislikes || 0}</button>
                         </div>
                     </div>
                 </div>`;
@@ -179,8 +210,8 @@ async function leerSecretos() {
                     </div>`;
             }
         });
-        container.innerHTML = htmlFinal;
-        cargarAds();
+        container.innerHTML = htmlFinal || '<p style="text-align:center;">No hay secretos...</p>';
+        setTimeout(cargarAds, 500);
     }
 }
 
