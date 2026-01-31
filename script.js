@@ -172,9 +172,10 @@ async function leerSecretos() {
             susRespuestas.forEach(r => {
                 const rImg = r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : "";
                 const rVoto = localStorage.getItem(`voto_${r.id}`);
+                
+                // ELIMINADO: <small class="post-id">ID: #${r.id}</small>
                 respuestasHtml += `
                     <div class="reply-card">
-                        <small class="post-id">ID: #${r.id}</small>
                         <p>${escaparHTML(r.contenido)}</p>
                         ${rImg}
                         <div class="footer-card">
@@ -191,10 +192,10 @@ async function leerSecretos() {
                 ? `<button id="btn-toggle-${s.id}" class="toggle-btn" onclick="toggleRespuestas(${s.id})">Ver ${susRespuestas.length} respuestas</button>` 
                 : "";
 
+            // ELIMINADO: <small class="post-id">ID: #${s.id}</small>
             htmlFinal += `
                 <div class="post-group">
                     <div class="card">
-                        <small class="post-id">ID: #${s.id}</small>
                         <p>${escaparHTML(s.contenido)}</p>
                         ${imgHtml}
                         <div class="footer-card">
