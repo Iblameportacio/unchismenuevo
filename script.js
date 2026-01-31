@@ -208,7 +208,7 @@ async function leerSecretos() {
             });
 
             const btnToggle = susRespuestas.length > 0 
-                ? `<button id="btn-toggle-${s.id}" class="toggle-btn" onclick="toggleRespuestas(${s.id})">🔽 Ver ${susRespuestas.length} respuestas</button>` 
+                ? `<button id="btn-toggle-${s.id}" class="toggle-btn" onclick="toggleRespuestas(${s.id})">Ver ${susRespuestas.length} respuestas</button>` 
                 : "";
 
             htmlFinal += `
