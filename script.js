@@ -11,6 +11,20 @@ let comunidadActual = 'general';
 let ultimaPublicacion = 0;
 let respondiendoA = null;
 
+// --- MODAL DE POLÍTICAS ---
+const modal = document.getElementById('modal-politicas');
+const btnAceptar = document.getElementById('btn-aceptar');
+const btnRechazar = document.getElementById('btn-rechazar');
+
+if (localStorage.getItem('politicasAceptadas') === 'true') {
+    modal.style.display = 'none';
+}
+btnAceptar.onclick = () => {
+    localStorage.setItem('politicasAceptadas', 'true');
+    modal.style.display = 'none';
+};
+btnRechazar.onclick = () => window.location.href = "https://google.com";
+
 // --- SEGURIDAD: ANTI-XSS ---
 function escaparHTML(str) {
     if (!str) return "";
@@ -32,11 +46,11 @@ function toggleRespuestas(id) {
     }
 }
 
-// --- SISTEMA DE RESPUESTAS MEJORADO ---
+// --- SISTEMA DE RESPUESTAS (HILOS ANIDADOS) ---
 function prepararRespuesta(id, mencionId = null) {
     respondiendoA = id;
     if (mencionId) {
-        input.value = `>>${mencionId} `; // Estilo tipo foro para citar
+        input.value = `>>${mencionId} `; 
         input.placeholder = `Respondiendo al comentario #${mencionId}...`;
     } else {
         input.placeholder = `Respondiendo al post #${id}...`;
@@ -59,7 +73,88 @@ function prepararRespuesta(id, mencionId = null) {
     }
 }
 
-// --- LEER CON HILOS ANIDADOS ---
+// --- COMPRESIÓN Y LIMPIEZA DE IMAGEN (BORRA GPS) ---
+async function comprimirImagen(archivo) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(archivo);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                let width = img.width;
+                let height = img.height;
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                canvas.width = width; canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => resolve(blob), 'image/webp', 0.7);
+            };
+        };
+    });
+}
+
+// --- REACCIONES ---
+async function reaccionar(id, columna) {
+    if (localStorage.getItem(`voto_${id}`)) return alert("Ya reaccionaste, broski.");
+    const { error } = await _supabase.rpc('incrementar_reaccion', { row_id: id, columna_nombre: columna });
+    if (!error) {
+        localStorage.setItem(`voto_${id}`, 'true');
+        await leerSecretos();
+    }
+}
+
+// --- ENVIAR SECRETO O RESPUESTA ---
+async function enviarSecreto() {
+    const ahora = Date.now();
+    const texto = input.value.trim();
+    const captchaRes = turnstile.getResponse();
+    const file = fotoInput.files[0];
+
+    if (ahora - ultimaPublicacion < 10000) return alert("Espera 10 segundos.");
+    if (texto.length > 1000) return alert("Muy largo.");
+    if (!captchaRes || captchaRes.length < 20) return alert("Haz el captcha.");
+    if (!texto && !file) return alert("Escribe algo...");
+
+    btn.disabled = true;
+    btn.innerText = "Publicando...";
+    let urlFoto = null;
+
+    try {
+        if (file) {
+            const { data: uploadData, error: uploadError } = await _supabase.storage
+                .from('imagenes').upload(`${Date.now()}.webp`, await comprimirImagen(file));
+            if (!uploadError) {
+                const { data: urlData } = _supabase.storage.from('imagenes').getPublicUrl(uploadData.path);
+                urlFoto = urlData.publicUrl;
+            }
+        }
+
+        const { error } = await _supabase.from('secretos').insert([{ 
+            contenido: texto, 
+            imagen_url: urlFoto, 
+            categoria: comunidadActual,
+            padre_id: respondiendoA,
+            likes: 0, 
+            dislikes: 0 
+        }]);
+
+        if (!error) {
+            input.value = "";
+            fotoInput.value = "";
+            respondiendoA = null;
+            if(document.getElementById('btn-cancelar-reply')) document.getElementById('btn-cancelar-reply').remove();
+            ultimaPublicacion = ahora;
+            turnstile.reset();
+            await leerSecretos();
+        }
+    } catch (e) { console.error(e); turnstile.reset(); } 
+    finally { btn.disabled = false; btn.innerText = "Publicar"; }
+}
+
+// --- RENDERIZADO DEL FEED ---
 async function leerSecretos() {
     const { data: todos } = await _supabase.from('secretos').select('*').order('created_at', { ascending: false });
     
@@ -71,17 +166,15 @@ async function leerSecretos() {
         principales.forEach((s, index) => {
             const yaVoto = localStorage.getItem(`voto_${s.id}`);
             const imgHtml = s.imagen_url ? `<img src="${s.imagen_url}" class="card-img">` : "";
-            
             const susRespuestas = respuestas.filter(r => r.padre_id === s.id);
             let respuestasHtml = "";
             
             susRespuestas.forEach(r => {
                 const rImg = r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : "";
                 const rVoto = localStorage.getItem(`voto_${r.id}`);
-                
                 respuestasHtml += `
                     <div class="reply-card">
-                        <small style="color:var(--accent-red); font-size:10px;">ID: ${r.id}</small>
+                        <small class="post-id">ID: #${r.id}</small>
                         <p>${escaparHTML(r.contenido)}</p>
                         ${rImg}
                         <div class="footer-card">
@@ -101,7 +194,7 @@ async function leerSecretos() {
             htmlFinal += `
                 <div class="post-group">
                     <div class="card">
-                        <small style="color:var(--text-dim); font-size:10px;">ID: ${s.id}</small>
+                        <small class="post-id">ID: #${s.id}</small>
                         <p>${escaparHTML(s.contenido)}</p>
                         ${imgHtml}
                         <div class="footer-card">
@@ -117,9 +210,14 @@ async function leerSecretos() {
                         ${respuestasHtml}
                     </div>
                 </div>`;
-            // ... resto del loop (ads)
+            
+            if ((index + 1) % 4 === 0) {
+                htmlFinal += `<div class="ad-inline-active"></div>`;
+            }
         });
         container.innerHTML = htmlFinal || '<p style="text-align:center;">No hay secretos...</p>';
     }
 }
-// ... resto de funciones (enviar, comprimir, etc.)
+
+btn.onclick = enviarSecreto;
+leerSecretos();
