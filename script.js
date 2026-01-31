@@ -196,6 +196,8 @@ async function leerSecretos() {
             susRespuestas.forEach(r => {
                 const rImg = r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : "";
                 const rVoto = localStorage.getItem(`voto_${r.id}`);
+                
+                // AQUÍ QUITAMOS LOS EMOJIS INNECESARIOS
                 respuestasHtml += `
                     <div class="reply-card">
                         <p>${escaparHTML(r.contenido)}</p>
