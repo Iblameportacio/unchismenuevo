@@ -39,13 +39,19 @@
 
             <section id="form-area">
                 <textarea id="secretoInput" placeholder="¿Qué está pasando?" maxlength="1000"></textarea>
-                <div id="preview-container" style="display:none; margin-bottom: 10px;">
+    
+                <div id="preview-container" style="display:none; margin-bottom: 10px; position: relative;">
                     <img id="img-preview" src="" style="width: 100%; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <span onclick="cancelarFoto()" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px 10px; border-radius: 50%; cursor: pointer;">✕</span>
                 </div>
+
                 <div id="captcha-container" class="cf-turnstile" data-sitekey="1x00000000000000000000AA"></div>
+    
                 <div class="form-footer">
                     <input type="file" id="fotoInput" accept="image/*" style="display: none;" onchange="mostrarPreview(this)">
-                    <button type="button" class="btn-icon" onclick="document.getElementById('fotoInput').click()">🖼️</button>
+        
+                    <button type="button" class="btn-icon" onclick="document.getElementById('fotoInput').click()">📸</button>
+        
                     <button id="enviarBtn">Publicar</button>
                 </div>
             </section>
