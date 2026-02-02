@@ -67,7 +67,7 @@ async function leerSecretos() {
         return `
             <div class="post-group">
                 <div class="card">
-                    <div class="post-header"><span class="post-id" onclick="citarPost(${s.id})">No.${s.id} [+]</span></div>
+                    <div class="post-header"><span class="post-id" onclick="citarPost(${s.id})">Anónimo No.${s.id} [+]</span></div>
                     <p>${escaparHTML(s.contenido)}</p>
                     ${renderMedia(s.imagen_url)}
                     <div class="footer-card">
@@ -76,10 +76,13 @@ async function leerSecretos() {
                     </div>
                 </div>
                 ${susRespuestas.map(r => `
-                    <div class="reply-card" style="margin-left: 50px; border-left: 2px solid #333; padding-left: 15px;">
+                    <div class="reply-card">
                         <div class="post-header"><span class="post-id" onclick="citarPost(${r.id})">No.${r.id} [+]</span></div>
-                        <p>${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span class="mention" style="color:#8b0000;">>>$1</span>')}</p>
+                        <p>${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span style="color:var(--accent-red)">>>$1</span>')}</p>
                         ${renderMedia(r.imagen_url)}
+                        <div class="footer-card">
+                            <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
+                        </div>
                     </div>
                 `).join('')}
             </div>`;
