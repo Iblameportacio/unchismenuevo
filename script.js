@@ -44,8 +44,9 @@ function citarPost(id) {
 function renderMedia(url) {
     if(!url) return '';
     const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)/i);
+    // Añadimos preload="metadata" para carga más rápida
     return isVideo ? 
-        `<video src="${url}" controls playsinline class="card-img"></video>` : 
+        `<video src="${url}" controls preload="metadata" playsinline class="card-img"></video>` : 
         `<img src="${url}" class="card-img" loading="lazy">`;
 }
 
@@ -56,7 +57,11 @@ function escaparHTML(str) {
 }
 
 async function leerSecretos() {
-    const { data, error } = await _supabase.from('secretos').select('*').eq('categoria', comunidadActual).order('created_at', { ascending: false });
+    const { data, error } = await _supabase.from('secretos')
+        .select('*')
+        .eq('categoria', comunidadActual)
+        .order('created_at', { ascending: false });
+
     if (error || !data) return;
 
     const principal = data.filter(s => !s.padre_id);
@@ -67,21 +72,27 @@ async function leerSecretos() {
         return `
             <div class="post-group">
                 <div class="card">
-                    <div class="post-header"><span class="post-id" onclick="citarPost(${s.id})">Anónimo No.${s.id} [+]</span></div>
-                    <p>${escaparHTML(s.contenido)}</p>
+                    <div class="post-header" style="margin-bottom:10px;">
+                        <span class="post-id" style="color:var(--text-dim); font-size:12px; cursor:pointer;" onclick="citarPost(${s.id})">
+                            ID #${s.id} <b style="color:var(--accent-red)">[+]</b>
+                        </span>
+                    </div>
+                    <p style="line-height:1.5; font-size:17px;">${escaparHTML(s.contenido)}</p>
                     ${renderMedia(s.imagen_url)}
                     <div class="footer-card">
-                        <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
+                        <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 RESPONDER</button>
                         <button class="like-btn" onclick="reaccionar(${s.id})">🔥 ${s.likes || 0}</button>
                     </div>
                 </div>
                 ${susRespuestas.map(r => `
                     <div class="reply-card">
-                        <div class="post-header"><span class="post-id" onclick="citarPost(${r.id})">No.${r.id} [+]</span></div>
-                        <p>${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span style="color:var(--accent-red)">>>$1</span>')}</p>
-                        ${renderMedia(r.imagen_url)}
-                        <div class="footer-card">
-                            <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
+                        <div class="card" style="padding:15px 20px;">
+                            <span class="post-id" style="color:var(--text-dim); font-size:11px;" onclick="citarPost(${r.id})">#${r.id}</span>
+                            <p style="font-size:15px;">${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span style="color:var(--accent-red); font-weight:bold;">>>$1</span>')}</p>
+                            ${renderMedia(r.imagen_url)}
+                            <div class="footer-card" style="border:none; padding:0; margin-top:10px;">
+                                <button class="reply-btn" style="padding:5px 12px; font-size:11px;" onclick="prepararRespuesta(${s.id})">💬</button>
+                            </div>
                         </div>
                     </div>
                 `).join('')}
