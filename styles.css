@@ -23,13 +23,13 @@ html, body {
 header {
     padding: 15px; border-bottom: 1px solid var(--border-color);
     text-align: center; background: var(--nav-bg);
-    backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;
 }
 header h1 { font-size: 24px; margin: 0; letter-spacing: -0.5px; font-weight: 900; }
 header h1 .barbaro { color: var(--accent-red); }
 .warning { color: var(--text-dim); font-size: 11px; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
-/* --- LAYOUT (ENSANCHADO) --- */
+/* --- LAYOUT --- */
 .layout-container { 
     display: flex; 
     justify-content: center; 
@@ -40,7 +40,7 @@ header h1 .barbaro { color: var(--accent-red); }
 
 main { 
     width: 100%; 
-    max-width: 750px; /* Feed más ancho como en X/Desktop */
+    max-width: 750px; 
     border-left: 1px solid var(--border-color); 
     border-right: 1px solid var(--border-color); 
     min-height: 100vh; 
@@ -67,17 +67,17 @@ textarea { width: 100%; background: transparent; border: none; color: var(--text
 #enviarBtn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
 .btn-icon { background: #161b22; border: 1px solid var(--border-color); font-size: 18px; cursor: pointer; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 
-/* --- FEED & MULTIMEDIA --- */
+/* --- FEED & MULTIMEDIA (FIXED) --- */
 .post-group { 
     border-bottom: 1px solid var(--border-color); 
     transition: background 0.2s ease;
+    position: relative;
 }
 .post-group:hover { background-color: rgba(255, 255, 255, 0.02); }
 
-.card { padding: 15px 25px; }
+.card { padding: 15px 25px; position: relative; z-index: 1; }
 .card p { font-size: 16px; line-height: 1.5; margin: 0; white-space: pre-wrap; word-wrap: break-word; }
 
-/* Multimedia unificada para el nuevo ancho */
 .card-img, .card-img-reply { 
     width: 100%; 
     max-height: 550px; 
@@ -87,20 +87,31 @@ textarea { width: 100%; background: transparent; border: none; color: var(--text
     margin: 12px 0; 
     background: #000; 
     display: block;
+    position: relative;
+    z-index: 2; /* Debajo de los botones interactivos */
 }
 
-.footer-card { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.footer-card { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-top: 10px;
+    position: relative;
+    z-index: 10; /* Siempre por encima del video */
+}
+
 .like-btn, .reply-btn { background: transparent; border: none; color: var(--text-dim); padding: 8px 12px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 14px; transition: 0.2s; }
 .like-btn:hover { color: var(--success); background: rgba(0, 186, 124, 0.1); }
 .reply-btn:hover { color: var(--accent-red); background: rgba(139, 0, 0, 0.1); }
 
 /* --- RESPUESTAS --- */
-.replies-container { margin-bottom: 10px; }
+.replies-container { margin-bottom: 10px; position: relative; z-index: 5; }
 .reply-card { 
-    margin-left: 60px; /* Sangría más profunda para el feed ancho */
+    margin-left: 60px; 
     margin-top: 5px; 
     padding: 10px 20px; 
     border-left: 2px solid var(--reply-line); 
+    position: relative;
 }
 .post-id { color: var(--accent-red); font-family: monospace; font-size: 13px; cursor: pointer; margin-left: 8px; font-weight: bold; }
 .mention { color: #ff4500; font-weight: bold; }
