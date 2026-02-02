@@ -1,29 +1,38 @@
 /* --- VARIABLES  VUELVE A LA PAGINA QUE HACES AQUI, METICHE--- */
 :root {
-    --bg-color: #000000;
-    --border-color: #2f3336;
-    --text-main: #e7e9ea;
+    --bg-color: #050505; /* Negro profundo */
+    --card-bg: rgba(22, 27, 34, 0.5); /* Glassmorphism */
+    --border-color: rgba(47, 51, 54, 0.6);
+    --text-main: #f7f9f9;
     --text-dim: #71767b;
-    --accent-red: #8b0000;
-    --nav-bg: rgba(0, 0, 0, 0.85);
+    --accent-red: #d32f2f;
+    --accent-glow: rgba(211, 47, 47, 0.3);
+    --nav-bg: rgba(5, 5, 5, 0.8);
 }
 
 /* --- BASE --- */
 html, body {
     background-color: var(--bg-color);
     color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, sans-serif;
     margin: 0; padding: 0;
+    scroll-behavior: smooth;
 }
 
 /* --- HEADER --- */
 header {
-    padding: 15px; border-bottom: 1px solid var(--border-color);
-    text-align: center; background: var(--nav-bg);
-    backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 10000;
+    padding: 20px; border-bottom: 1px solid var(--border-color);
+    background: var(--nav-bg); backdrop-filter: blur(15px);
+    position: sticky; top: 0; z-index: 1000;
 }
-header h1 { font-size: 24px; margin: 0; font-weight: 900; letter-spacing: -0.5px; }
-header h1 .barbaro { color: var(--accent-red); }
+header h1 { 
+    font-size: 26px; font-weight: 900; 
+    text-transform: uppercase; letter-spacing: 2px;
+}
+header h1 .barbaro { 
+    color: var(--accent-red);
+    text-shadow: 0 0 10px var(--accent-glow);
+}
 
 /* --- LAYOUT ANCHO (850px) --- */
 .layout-container { display: flex; justify-content: center; }
@@ -42,25 +51,26 @@ main {
 textarea { width: 100%; background: transparent; border: none; color: var(--text-main); font-size: 19px; resize: none; outline: none; min-height: 100px; }
 
 /* --- FEED & MULTIMEDIA BLINDADO --- */
-.post-group { border-bottom: 1px solid var(--border-color); position: relative; }
-.card, .reply-card { 
-    padding: 20px 25px; /* Más espacio interno */
-    display: flex; flex-direction: column; 
+.post-group { 
+    border-bottom: 1px solid var(--border-color); 
+    animation: fadeIn 0.5s ease forwards;
 }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.card { 
+    padding: 25px; transition: background 0.3s;
+}
+.card:hover { background: rgba(255, 255, 255, 0.02); }
 
+/* MULTIMEDIA PREMIUM */
 .card-img { 
-    width: 100%; max-height: 550px; object-fit: contain; 
-    border-radius: 16px; border: 1px solid var(--border-color); 
-    margin: 15px 0 25px 0; /* Más margen abajo para que no tape botones */
-    background: #000;
+    border-radius: 12px; border: 1px solid var(--border-color); 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    transition: transform 0.3s ease;
 }
-
-/* FOOTER FIX (Para que el click funcione sobre videos) */
-.footer-card { 
-    display: flex !important; gap: 20px; align-items: center; 
-    padding-top: 10px; border-top: 1px solid rgba(47, 51, 54, 0.5);
-    position: relative; z-index: 10;
-}
+.card-img:hover { transform: scale(1.01); }
 .like-btn, .reply-btn { 
     background: #161b22; border: 1px solid var(--border-color);
     color: var(--text-main) !important; cursor: pointer !important;
@@ -69,17 +79,30 @@ textarea { width: 100%; background: transparent; border: none; color: var(--text
 }
 
 .reply-btn, .like-btn {
-    background: #161b22; border: 1px solid var(--border-color);
-    color: var(--text-main); cursor: pointer; padding: 8px 18px;
-    border-radius: 20px; font-weight: 600; font-size: 13px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
-
 /* RESPUESTAS ANIDADAS */
-.reply-card { 
-    margin-left: 50px; border-left: 2px solid #333; 
-    background: rgba(255,255,255,0.02); margin-bottom: 5px;
+.reply-btn:hover { 
+    border-color: var(--accent-red); 
+    box-shadow: 0 0 8px var(--accent-glow);
 }
 
+/* RESPUESTAS ELEGANTE */
+.reply-card { 
+    margin-left: 40px; 
+    border-left: 2px solid var(--accent-red);
+    background: rgba(211, 47, 47, 0.03);
+    border-radius: 0 12px 12px 0;
+    margin-bottom: 8px;
+}
 /* --- MODAL (FIXED) --- */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 99999; }
 .modal-content { background: #000; padding: 30px; border-radius: 24px; border: 1px solid var(--border-color); text-align: center; max-width: 400px; }
