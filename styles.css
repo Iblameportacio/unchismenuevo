@@ -94,25 +94,40 @@ textarea {
 /* Botón Publicar Fix */
 #enviarBtn {
     background: linear-gradient(135deg, var(--accent-red), #800000) !important;
-    color: white !important; border: none !important;
-    padding: 10px 24px !important; border-radius: 12px !important;
-    font-weight: 800 !important; text-transform: uppercase;
-    letter-spacing: 0.5px; cursor: pointer;
-    transition: all 0.2s ease-in-out; position: relative;
-}
-#enviarBtn:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px var(--accent-glow);
-    filter: brightness(1.1);
-}
-#enviarBtn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
-#enviarBtn:disabled {
-    background: #161b22 !important; color: var(--text-dim) !important;
-    cursor: not-allowed !important; opacity: 0.5;
-    transform: none !important; box-shadow: none !important;
-    pointer-events: none; /* Mata el hover fantasma */
+    color: white !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    /* Quitamos transform y top de la transición */
+    transition: background 0.2s, filter 0.2s, box-shadow 0.2s; 
+    position: relative;
+    transform: none !important; /* Forzamos que no se mueva */
+    top: 0 !important;
 }
 
+#enviarBtn:hover:not(:disabled) {
+    /* Mantenemos el brillo y la sombra, pero SIN moverse un solo píxel */
+    filter: brightness(1.1);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+#enviarBtn:active:not(:disabled) {
+    /* Solo un cambio visual de brillo al clickear, nada de escalas */
+    filter: brightness(0.8);
+}
+
+#enviarBtn:disabled {
+    background: #161b22 !important;
+    color: var(--text-dim) !important;
+    cursor: not-allowed !important;
+    opacity: 0.5;
+    box-shadow: none !important;
+    filter: none !important;
+}
 /* --- FEED & CARDS --- */
 .post-group { border-bottom: 1px solid var(--border-color); animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
