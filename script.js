@@ -15,7 +15,6 @@ let tokenCaptcha = null;
 function captchaResuelto(token) { tokenCaptcha = token; btn.disabled = false; }
 function captchaExpirado() { tokenCaptcha = null; btn.disabled = true; }
 
-// --- FUNCIONALIDAD 4CHAN (CITAR) ---
 function citarPost(id) {
     input.value += (input.value ? '\n' : '') + `>>${id} `;
     input.focus();
@@ -36,22 +35,40 @@ function escaparHTML(str) {
     return div.innerHTML;
 }
 
-// --- PREVIEW IMAGEN ---
+// --- PREVIEW MEJORADO (FOTOS Y VIDEOS) ---
 function mostrarPreview(input) {
-    const preview = document.getElementById('img-preview');
     const containerPreview = document.getElementById('preview-container');
-    if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    if (file) {
+        // VALIDACIÓN DE PESO: 15MB
+        const limiteMB = 15 * 1024 * 1024;
+        if (file.size > limiteMB) {
+            alert("Broski, ese archivo pesa demasiado. El límite son 15MB.");
+            cancelarFoto();
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => { 
-            preview.src = e.target.result; 
+            // Limpiamos y detectamos tipo
+            containerPreview.innerHTML = '<span onclick="cancelarFoto()" class="cancelar-preview">✕</span>';
+            
+            if (file.type.startsWith('video/')) {
+                containerPreview.innerHTML += `<video src="${e.target.result}" id="img-preview" autoplay muted loop style="width:100%; border-radius:12px;"></video>`;
+            } else {
+                containerPreview.innerHTML += `<img src="${e.target.result}" id="img-preview" style="width:100%; border-radius:12px;">`;
+            }
             containerPreview.style.display = 'block'; 
         }
-        reader.readAsDataURL(input.files[0]);
+        reader.readAsDataURL(file);
     }
 }
+
 function cancelarFoto() { 
     fotoInput.value = ""; 
     document.getElementById('preview-container').style.display = 'none'; 
+    document.getElementById('preview-container').innerHTML = '';
 }
 
 function cambiarComunidad(c) {
@@ -70,7 +87,6 @@ function prepararRespuesta(id) {
         c.id = 'btn-cancelar';
         c.innerHTML = " [✖ Cancelar]";
         c.className = "cancelar-text";
-        c.style.cursor = "pointer";
         c.onclick = () => { 
             respondiendoA = null; 
             input.value = ""; 
@@ -90,7 +106,7 @@ async function reaccionar(id) {
     }
 }
 
-// --- RENDERIZADO ---
+// --- RENDERIZADO CON SOPORTE VIDEO ---
 async function leerSecretos() {
     const { data, error } = await _supabase
         .from('secretos')
@@ -106,6 +122,13 @@ async function leerSecretos() {
     container.innerHTML = principal.map(s => {
         const susRespuestas = respuestas.filter(r => r.padre_id === s.id).reverse();
         
+        const renderMedia = (url, isReply) => {
+            if(!url) return '';
+            const isVideo = url.match(/\.(mp4|webm|ogg)/i);
+            const clase = isReply ? 'card-img-reply' : 'card-img';
+            return isVideo ? `<video src="${url}" controls class="${clase}"></video>` : `<img src="${url}" class="${clase}">`;
+        };
+
         const rHtml = susRespuestas.map(r => `
             <div class="reply-card">
                 <div class="post-header">
@@ -113,7 +136,7 @@ async function leerSecretos() {
                     <span class="post-id" onclick="citarPost(${r.id})">No.${r.id} [+]</span>
                 </div>
                 <p>${escaparHTML(r.contenido).replace(/&gt;&gt;(\d+)/g, '<span class="mention">>>$1</span>')}</p>
-                ${r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : ''}
+                ${renderMedia(r.imagen_url, true)}
                 <button class="like-btn" onclick="reaccionar(${r.id})">🔥 ${r.likes || 0}</button>
             </div>
         `).join('');
@@ -126,7 +149,7 @@ async function leerSecretos() {
                         <span class="post-id" onclick="citarPost(${s.id})">No.${s.id} [+]</span>
                     </div>
                     <p>${escaparHTML(s.contenido).replace(/&gt;&gt;(\d+)/g, '<span class="mention">>>$1</span>')}</p>
-                    ${s.imagen_url ? `<img src="${s.imagen_url}" class="card-img">` : ''}
+                    ${renderMedia(s.imagen_url, false)}
                     <div class="footer-card">
                         <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
                         <button class="like-btn" onclick="reaccionar(${s.id})">🔥 ${s.likes || 0}</button>
@@ -137,32 +160,29 @@ async function leerSecretos() {
     }).join('');
 }
 
-// --- ENVÍO CORREGIDO ---
+// --- ENVÍO CON SOPORTE MULTIMEDIA ---
 btn.onclick = async () => {
     if (!tokenCaptcha) { alert("Resuelve el captcha primero."); return; }
-    
     const texto = input.value.trim();
     const file = fotoInput.files[0];
     if(!texto && !file) return;
     
     btn.disabled = true;
     btn.innerText = "Subiendo...";
-    
     let urlFoto = null;
 
     try {
         if (file) {
             const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
 
             const { error: uploadError } = await _supabase.storage
                 .from('imagenes')
-                .upload(filePath, file);
+                .upload(fileName, file);
 
             if (uploadError) throw uploadError;
 
-            const { data } = _supabase.storage.from('imagenes').getPublicUrl(filePath);
+            const { data } = _supabase.storage.from('imagenes').getPublicUrl(fileName);
             urlFoto = data.publicUrl;
         }
 
@@ -176,7 +196,6 @@ btn.onclick = async () => {
 
         if (insertError) throw insertError;
 
-        // Reset total
         input.value = "";
         cancelarFoto();
         respondiendoA = null;
@@ -187,8 +206,8 @@ btn.onclick = async () => {
         leerSecretos();
 
     } catch (err) {
-        console.error("Error detallado:", err);
-        alert("Error al publicar. Revisa los permisos del Storage en Supabase.");
+        console.error("Error:", err);
+        alert("Fallo al publicar: " + err.message);
     } finally {
         btn.innerText = "Publicar";
         btn.disabled = false;
