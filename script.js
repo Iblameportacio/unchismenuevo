@@ -9,6 +9,18 @@ const fotoInput = document.getElementById('fotoInput');
 
 let comunidadActual = 'general';
 let respondiendoA = null;
+let tokenCaptcha = null; // Guardará la validación
+
+// --- SEGURIDAD CAPTCHA ---
+function captchaResuelto(token) { tokenCaptcha = token; btn.disabled = false; }
+function captchaExpirado() { tokenCaptcha = null; btn.disabled = true; }
+
+// --- FUNCIONALIDAD 4CHAN (CITAR) ---
+function citarPost(id) {
+    input.value += (input.value ? '\n' : '') + `>>${id} `;
+    input.focus();
+    if (!respondiendoA) prepararRespuesta(id);
+}
 
 // --- POLÍTICAS ---
 const modal = document.getElementById('modal-politicas');
@@ -24,24 +36,17 @@ function escaparHTML(str) {
     return div.innerHTML;
 }
 
-// --- PREVIEW DE IMAGEN ---
+// --- PREVIEW IMAGEN ---
 function mostrarPreview(input) {
     const preview = document.getElementById('img-preview');
-    const previewContainer = document.getElementById('preview-container');
+    const container = document.getElementById('preview-container');
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = (e) => {
-            preview.src = e.target.result;
-            previewContainer.style.display = 'block';
-        }
+        reader.onload = (e) => { preview.src = e.target.result; container.style.display = 'block'; }
         reader.readAsDataURL(input.files[0]);
     }
 }
-
-function cancelarFoto() {
-    fotoInput.value = "";
-    document.getElementById('preview-container').style.display = 'none';
-}
+function cancelarFoto() { fotoInput.value = ""; document.getElementById('preview-container').style.display = 'none'; }
 
 function cambiarComunidad(c) {
     comunidadActual = c;
@@ -52,8 +57,7 @@ function cambiarComunidad(c) {
 
 function prepararRespuesta(id, esComentario = false) {
     respondiendoA = id;
-    input.placeholder = esComentario ? "Respondiendo al comentario..." : "Respondiendo al post...";
-    input.value = esComentario ? ">> " : ""; 
+    input.placeholder = "Escribiendo respuesta...";
     input.focus();
     if(!document.getElementById('btn-cancelar')) {
         const c = document.createElement('span');
@@ -61,27 +65,20 @@ function prepararRespuesta(id, esComentario = false) {
         c.innerHTML = " [✖ Cancelar]";
         c.className = "cancelar-text";
         c.onclick = () => { 
-            respondiendoA = null; 
-            input.value = ""; 
-            input.placeholder = "¿Qué está pasando?";
-            c.remove(); 
+            respondiendoA = null; input.value = ""; 
+            input.placeholder = "¿Qué está pasando?"; c.remove(); 
         };
         input.parentNode.insertBefore(c, input);
     }
 }
 
-// --- REACCIONES ---
 async function reaccionar(id) {
     if (localStorage.getItem(`voto_${id}`)) return;
-    // RPC para incrementar likes (Debes tener la función en Supabase)
     const { error } = await _supabase.rpc('incrementar_reaccion', { row_id: id, columna_nombre: 'likes' });
-    if (!error) {
-        localStorage.setItem(`voto_${id}`, 'true');
-        leerSecretos();
-    }
+    if (!error) { localStorage.setItem(`voto_${id}`, 'true'); leerSecretos(); }
 }
 
-// --- LEER POSTS ---
+// --- RENDERIZADO TIPO 4CHAN ---
 async function leerSecretos() {
     const { data } = await _supabase.from('secretos').select('*').eq('categoria', comunidadActual).order('created_at', { ascending: false });
     if (!data) return;
@@ -93,18 +90,23 @@ async function leerSecretos() {
         const susRespuestas = respuestas.filter(r => r.padre_id === s.id).reverse();
         const rHtml = susRespuestas.map(r => `
             <div class="reply-card ${r.contenido.includes('>>') ? 'nested-reply' : ''}">
-                <p>${escaparHTML(r.contenido).replace('&gt;&gt;', '<span class="mention">RE:</span>')}</p>
-                ${r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : ''}
-                <div class="footer-card">
-                    <button class="reply-btn-inner" onclick="prepararRespuesta(${s.id}, true)">↩</button>
-                    <button class="like-btn" onclick="reaccionar(${r.id})">🔥 ${r.likes || 0}</button>
+                <div class="post-header">
+                    <span class="post-author">Anónimo</span>
+                    <span class="post-id" onclick="citarPost(${r.id})">No.${r.id} [+]</span>
                 </div>
+                <p>${escaparHTML(r.contenido).replace(/&gt;&gt;(\d+)/g, '<span class="mention">>>$1</span>')}</p>
+                ${r.imagen_url ? `<img src="${r.imagen_url}" class="card-img-reply">` : ''}
+                <button class="like-btn" onclick="reaccionar(${r.id})">🔥 ${r.likes || 0}</button>
             </div>
         `).join('');
 
         return `
             <div class="post-group">
                 <div class="card">
+                    <div class="post-header">
+                        <span class="post-author">Anónimo</span>
+                        <span class="post-id" onclick="citarPost(${s.id})">No.${s.id} [+]</span>
+                    </div>
                     <p>${escaparHTML(s.contenido)}</p>
                     ${s.imagen_url ? `<img src="${s.imagen_url}" class="card-img">` : ''}
                     <div class="footer-card">
@@ -117,49 +119,42 @@ async function leerSecretos() {
     }).join('');
 }
 
-// --- ENVIAR POST (CON IMAGEN) ---
+// --- ENVÍO CON VALIDACIÓN ---
 btn.onclick = async () => {
+    if (!tokenCaptcha) { alert("Broski, resuelve el captcha primero."); return; }
+    
     const texto = input.value.trim();
     const file = fotoInput.files[0];
     if(!texto && !file) return;
     
     btn.disabled = true;
-    btn.innerText = "Subiendo...";
+    btn.innerText = "Publicando...";
     
     let urlFoto = null;
-
     try {
         if (file) {
             const fileName = `${Date.now()}_${file.name}`;
-            const { data, error: uploadError } = await _supabase.storage
-                .from('imagenes') // Asegúrate que tu bucket se llame 'imagenes'
-                .upload(fileName, file);
-
-            if (uploadError) throw uploadError;
-
-            const { data: urlData } = _supabase.storage.from('imagenes').getPublicUrl(fileName);
-            urlFoto = urlData.publicUrl;
+            const { error: upErr } = await _supabase.storage.from('imagenes').upload(fileName, file);
+            if (upErr) throw upErr;
+            urlFoto = _supabase.storage.from('imagenes').getPublicUrl(fileName).data.publicUrl;
         }
 
         await _supabase.from('secretos').insert([{
-            contenido: texto,
-            categoria: comunidadActual,
-            padre_id: respondiendoA,
-            imagen_url: urlFoto,
-            likes: 0
+            contenido: texto, categoria: comunidadActual,
+            padre_id: respondiendoA, imagen_url: urlFoto, likes: 0
         }]);
 
         input.value = "";
         cancelarFoto();
         respondiendoA = null;
-        if(document.getElementById('btn-cancelar')) document.getElementById('btn-cancelar').remove();
+        tokenCaptcha = null; // Reset captcha
+        turnstile.reset(); // Reiniciar el widget de Cloudflare
         leerSecretos();
     } catch (e) {
-        alert("Error al publicar, intenta de nuevo.");
-        console.error(e);
+        alert("Error de conexión.");
     } finally {
-        btn.disabled = false;
         btn.innerText = "Publicar";
+        btn.disabled = true; // Se queda bloqueado hasta el siguiente captcha
     }
 };
 
