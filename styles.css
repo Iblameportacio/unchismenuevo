@@ -1,4 +1,4 @@
-/* --- VARIABLES --- */
+/* --- QUE BUSCAS EN EL CODIGO, METICHE --- */
 :root {
     --bg-color: #000000;
     --border-color: #2f3336;
@@ -24,17 +24,17 @@ html, body {
 header {
     padding: 15px; border-bottom: 1px solid var(--border-color);
     text-align: center; background: var(--nav-bg);
-    backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 1000;
+    backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 10000;
 }
 header h1 { font-size: 24px; margin: 0; letter-spacing: -0.5px; font-weight: 900; }
 header h1 .barbaro { color: var(--accent-red); }
 .warning { color: var(--text-dim); font-size: 11px; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 
-/* --- LAYOUT (ANCHO X-STYLE) --- */
+/* --- LAYOUT --- */
 .layout-container { display: flex; justify-content: center; width: 100%; margin: 0 auto; }
 main { 
     width: 100%; 
-    max-width: 750px; 
+    max-width: 850px; 
     border-left: 1px solid var(--border-color); 
     border-right: 1px solid var(--border-color); 
     min-height: 100vh; 
@@ -50,53 +50,57 @@ main {
 #form-area { padding: 15px 25px; border-bottom: 8px solid #161b22; position: relative; }
 textarea { width: 100%; background: transparent; border: none; color: var(--text-main); font-size: 19px; resize: none; outline: none; min-height: 100px; }
 
-/* --- FEED & MULTIMEDIA (FIXED) --- */
+/* --- FEED & MULTIMEDIA (THE FIX) --- */
 .post-group { border-bottom: 1px solid var(--border-color); transition: background 0.2s ease; position: relative; }
 .post-group:hover { background-color: rgba(255, 255, 255, 0.02); }
 
 .card { padding: 15px 25px; display: flex; flex-direction: column; position: relative; }
 .card p { font-size: 16px; line-height: 1.5; margin: 0; white-space: pre-wrap; word-wrap: break-word; }
 
-/* Multimedia con margen de seguridad */
+/* Multimedia con z-index bajo */
 .card-img, .card-img-reply { 
     width: 100%; 
     max-height: 550px; 
     object-fit: contain; 
     border-radius: 16px; 
     border: 1px solid var(--border-color); 
-    margin: 12px 0 15px 0; 
+    margin: 12px 0 20px 0; /* Más margen abajo para no tapar el botón */
     background: #000; 
     display: block;
+    position: relative;
     z-index: 1;
 }
 
-/* FOOTER CARD - Forzado para ser clickeable */
+/* FOOTER CARD - ANTI-BLOQUEO */
 .footer-card { 
-    display: flex; 
+    display: flex !important; 
     justify-content: flex-start; 
     gap: 25px;
     align-items: center; 
-    position: relative;
-    z-index: 100; /* Siempre encima del video */
-    padding: 5px 0;
-    pointer-events: auto; /* Asegura que detecte el mouse */
+    position: relative !important;
+    z-index: 9999 !important; /* Por encima de todo el video */
+    padding: 10px 0;
+    background: var(--bg-color); /* Fondo sólido para anular la transparencia del video */
+    pointer-events: auto !important; /* Fuerza la captura del click */
 }
 
 .like-btn, .reply-btn { 
     background: transparent; 
     border: none; 
-    color: var(--text-dim); 
-    cursor: pointer; 
+    color: var(--text-dim) !important; 
+    cursor: pointer !important; 
     display: flex; 
     align-items: center; 
     gap: 8px; 
     font-size: 14px; 
+    font-weight: 600;
     transition: 0.2s;
     padding: 8px 12px;
+    border-radius: 20px;
 }
 
-.reply-btn:hover { color: var(--accent-red); background: rgba(139, 0, 0, 0.1); border-radius: 20px; }
-.like-btn:hover { color: var(--success); background: rgba(0, 186, 124, 0.1); border-radius: 20px; }
+.reply-btn:hover { color: var(--accent-red) !important; background: rgba(139, 0, 0, 0.1); }
+.like-btn:hover { color: var(--success) !important; background: rgba(0, 186, 124, 0.1); }
 
 /* --- RESPUESTAS --- */
 .reply-card { 
@@ -105,11 +109,11 @@ textarea { width: 100%; background: transparent; border: none; color: var(--text
     padding: 10px 20px; 
     border-left: 2px solid var(--reply-line); 
     position: relative;
+    z-index: 5;
 }
 
 /* --- MODAL --- */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-.modal-content { background: #000; padding: 30px; border-radius: 24px; max-width: 400px; text-align: center; border: 1px solid var(--border-color); }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 20000; }
 
 /* --- RESPONSIVE --- */
 @media (max-width: 750px) {
