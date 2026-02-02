@@ -2,84 +2,89 @@ const SUPABASE_URL = "https://ksqrflkejlpojqhyktwf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uFWqkx-ygAhFBS5Z_va8tg_qXi7z1QV";
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ELEMENTOS
-const modal = document.getElementById('modal-politicas');
-const btnAceptar = document.getElementById('btn-aceptar');
 const input = document.getElementById('secretoInput');
 const btnEnviar = document.getElementById('enviarBtn');
 const container = document.getElementById('secretos-container');
+const replyIndicator = document.getElementById('reply-indicator');
 
 let comunidadActual = 'general';
 let respondiendoA = null;
 let tokenCaptcha = null;
 
-// --- FIX: LÓGICA DEL MODAL ---
-if (localStorage.getItem('politicasAceptadas')) {
-    if (modal) modal.style.display = 'none';
+// --- CONTROL DE ACCESO ---
+const modal = document.getElementById('modal-politicas');
+if (localStorage.getItem('politicasAceptadas')) modal.style.display = 'none';
+document.getElementById('btn-aceptar').onclick = () => {
+    localStorage.setItem('politicasAceptadas', 'true');
+    modal.style.display = 'none';
+};
+
+// --- LOGICA DE RESPUESTAS ---
+function prepararRespuesta(id) {
+    respondiendoA = id;
+    replyIndicator.innerHTML = `<span class="cancelar-text" onclick="cancelarRespuesta()">[Responder a No.${id} ✖]</span>`;
+    input.placeholder = "Escribe tu respuesta...";
+    input.focus();
+    window.scrollTo({ top: document.getElementById('form-area').offsetTop - 100, behavior: 'smooth' });
 }
 
-if (btnAceptar) {
-    btnAceptar.onclick = () => {
-        localStorage.setItem('politicasAceptadas', 'true');
-        modal.style.display = 'none';
-        console.log("Acceso concedido broski");
-    };
+function cancelarRespuesta() {
+    respondiendoA = null;
+    replyIndicator.innerHTML = "";
+    input.placeholder = "¿Qué está pasando?";
 }
 
-// --- CAPTCHA ---
-function captchaResuelto(token) { tokenCaptcha = token; if(btnEnviar) btnEnviar.disabled = false; }
+function citarPost(id) {
+    input.value += `>>${id} `;
+    prepararRespuesta(id);
+}
 
 // --- RENDERIZADO ---
-async function leerSecretos() {
-    const { data, error } = await _supabase
-        .from('secretos')
-        .select('*')
-        .eq('categoria', comunidadActual)
-        .order('created_at', { ascending: false });
+function renderMedia(url) {
+    if(!url) return '';
+    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)/i);
+    return isVideo ? 
+        `<video src="${url}" controls playsinline class="card-img"></video>` : 
+        `<img src="${url}" class="card-img" loading="lazy">`;
+}
 
+async function leerSecretos() {
+    const { data, error } = await _supabase.from('secretos').select('*').eq('categoria', comunidadActual).order('created_at', { ascending: false });
     if (error || !data) return;
 
     const principal = data.filter(s => !s.padre_id);
     const respuestas = data.filter(s => s.padre_id);
-    
+
     container.innerHTML = principal.map(s => {
         const susRespuestas = respuestas.filter(r => r.padre_id === s.id).reverse();
-        
-        const renderMedia = (url, isReply) => {
-            if(!url) return '';
-            const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)/i);
-            const clase = isReply ? 'card-img-reply' : 'card-img';
-            return isVideo ? 
-                `<video src="${url}" controls playsinline class="${clase}"></video>` : 
-                `<img src="${url}" class="${clase}" loading="lazy">`;
-        };
-
         return `
             <div class="post-group">
                 <div class="card">
-                    <div class="post-header">
-                        <span class="post-author">Anónimo</span>
-                        <span class="post-id" onclick="citarPost(${s.id})">No.${s.id} [+]</span>
-                    </div>
+                    <div class="post-header"><span class="post-id" onclick="citarPost(${s.id})">No.${s.id} [+]</span></div>
                     <p>${s.contenido}</p>
-                    ${renderMedia(s.imagen_url, false)}
+                    ${renderMedia(s.imagen_url)}
                     <div class="footer-card">
                         <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
                         <button class="like-btn" onclick="reaccionar(${s.id})">🔥 ${s.likes || 0}</button>
                     </div>
                 </div>
-                <div class="replies-container">
-                    ${susRespuestas.map(r => `
-                        <div class="reply-card" style="margin-left: 60px; border-left: 2px solid #333; padding: 10px 20px;">
-                            <span class="post-id">No.${r.id}</span>
-                            <p>${r.contenido}</p>
-                            ${renderMedia(r.imagen_url, true)}
+                ${susRespuestas.map(r => `
+                    <div class="reply-card">
+                        <div class="post-header"><span class="post-id" onclick="citarPost(${r.id})">No.${r.id} [+]</span></div>
+                        <p>${r.contenido.replace(/>>(\d+)/g, '<span class="mention">>>$1</span>')}</p>
+                        ${renderMedia(r.imagen_url)}
+                        <div class="footer-card">
+                            <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 Responder</button>
                         </div>
-                    `).join('')}
-                </div>
+                    </div>
+                `).join('')}
             </div>`;
     }).join('');
 }
+
+// --- CAPTCHA & ENVÍO ---
+function captchaResuelto(token) { tokenCaptcha = token; btnEnviar.disabled = false; }
+function captchaExpirado() { tokenCaptcha = null; btnEnviar.disabled = true; }
 
 // Inicializar
 leerSecretos();
