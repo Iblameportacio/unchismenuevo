@@ -18,7 +18,7 @@ html, body {
     margin: 0; padding: 0;
     scroll-behavior: smooth;
     width: 100%;
-    overflow-x: hidden; /* Evita el scroll horizontal rebelde */
+    overflow-x: hidden;
 }
 
 /* --- HEADER --- */
@@ -42,8 +42,7 @@ main {
     width: 100%; max-width: 850px; 
     border-left: 1px solid var(--border-color); 
     border-right: 1px solid var(--border-color);
-    box-sizing: border-box;
-    min-height: 100vh;
+    box-sizing: border-box; min-height: 100vh;
 }
 
 /* --- NAVEGACIÓN --- */
@@ -59,7 +58,7 @@ main {
 }
 .tab-btn.active { background: var(--accent-red); color: white; border-color: transparent; }
 
-/* --- FORMULARIO --- */
+/* --- FORMULARIO & BOTONES DE ACCIÓN --- */
 #form-area { padding: 20px; border-bottom: 8px solid #161b22; }
 textarea { 
     width: 100%; background: transparent; border: none; 
@@ -67,60 +66,74 @@ textarea {
     outline: none; min-height: 80px; 
 }
 
+.form-footer { display: flex; align-items: center; gap: 15px; padding-top: 10px; }
+
+/* Botón Cámara Pro */
+.form-footer button[onclick*="fotoInput"] {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 50%; width: 45px; height: 45px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease; cursor: pointer;
+}
+.form-footer button[onclick*="fotoInput"]:hover {
+    background: rgba(211, 47, 47, 0.1) !important;
+    border-color: var(--accent-red) !important;
+    transform: scale(1.1); box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Botón Enviar/Publicar Pro */
+#enviarBtn {
+    background: linear-gradient(135deg, var(--accent-red), #800000) !important;
+    color: white !important; border: none !important;
+    padding: 10px 25px !important; border-radius: 12px !important;
+    font-weight: 900 !important; text-transform: uppercase;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.3s ease;
+}
+#enviarBtn:hover:not(:disabled) {
+    box-shadow: 0 0 20px var(--accent-glow); transform: translateY(-2px);
+}
+#enviarBtn:disabled {
+    background: #161b22 !important; color: var(--text-dim) !important;
+    cursor: not-allowed; opacity: 0.6;
+}
+
 /* --- FEED & CARDS --- */
 .post-group { border-bottom: 1px solid var(--border-color); animation: fadeIn 0.4s ease-out; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.card, .reply-card { 
-    padding: 20px; width: 100%; 
-    box-sizing: border-box; word-wrap: break-word; 
-}
+.card, .reply-card { padding: 20px; width: 100%; box-sizing: border-box; word-wrap: break-word; }
 
-/* MULTIMEDIA RESPONSIVA */
 .card-img { 
-    width: 100% !important; height: auto !important; 
-    max-height: 75vh; object-fit: contain; 
-    border-radius: 12px; border: 1px solid var(--border-color);
+    width: 100% !important; height: auto !important; max-height: 75vh; 
+    object-fit: contain; border-radius: 12px; border: 1px solid var(--border-color);
     margin: 12px 0; display: block; background: #000;
 }
 
-/* BOTONES */
 .footer-card { display: flex; gap: 12px; margin-top: 10px; }
+
+/* Botones de Like y Reply en el Feed */
 .like-btn, .reply-btn { 
     background: var(--card-bg); border: 1px solid var(--border-color);
     color: var(--text-main); cursor: pointer; display: flex; 
-    align-items: center; gap: 6px; font-size: 12px; font-weight: 700; 
-    padding: 8px 16px; border-radius: 12px; transition: 0.2s;
+    align-items: center; gap: 8px; font-size: 12px; font-weight: 700; 
+    padding: 10px 18px; border-radius: 14px; transition: 0.2s;
 }
-.reply-btn:hover { border-color: var(--accent-red); box-shadow: 0 0 8px var(--accent-glow); }
+.reply-btn:hover { border-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-glow); background: rgba(211, 47, 47, 0.1); }
 
-/* RESPUESTAS (FIX MOVIL) */
+/* RESPUESTAS */
 .reply-card { 
-    margin-left: 30px; /* Espacio para el hilo */
-    border-left: 2px solid var(--accent-red);
-    background: rgba(255, 255, 255, 0.01);
-    width: calc(100% - 30px); /* Ajusta el ancho restando el margen */
+    margin-left: 30px; border-left: 2px solid var(--accent-red);
+    background: rgba(211, 47, 47, 0.02); width: calc(100% - 30px);
 }
 
-/* --- MODAL --- */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-.modal-content { background: #000; padding: 25px; border-radius: 20px; border: 1px solid var(--border-color); text-align: center; max-width: 90%; }
-
-/* --- MEDIA QUERIES (EL ARREGLO PARA MÓVIL) --- */
+/* --- MEDIA QUERIES --- */
 @media (max-width: 600px) {
     main { border: none; }
     header h1 { font-size: 18px; }
     #form-area { padding: 15px; }
     textarea { font-size: 16px; }
-    
     .card, .reply-card { padding: 15px; }
-    
-    /* En móvil bajamos el margen de respuesta para que no se vea cortado */
-    .reply-card { 
-        margin-left: 15px; 
-        width: calc(100% - 15px);
-    }
-    
-    .footer-card { gap: 8px; }
-    .like-btn, .reply-btn { padding: 10px; font-size: 11px; }
+    .reply-card { margin-left: 15px; width: calc(100% - 15px); }
+    .like-btn, .reply-btn { padding: 8px 12px; font-size: 11px; }
 }
