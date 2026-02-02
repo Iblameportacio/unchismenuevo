@@ -44,7 +44,7 @@ function citarPost(id) {
 function renderMedia(url) {
     if(!url) return '';
     const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)/i);
-    // Añadimos preload="metadata" para carga más rápida
+    // Añadimos la clase card-img que ahora es 100% responsiva en CSS
     return isVideo ? 
         `<video src="${url}" controls preload="metadata" playsinline class="card-img"></video>` : 
         `<img src="${url}" class="card-img" loading="lazy">`;
