@@ -10,8 +10,16 @@ const fotoInput = document.getElementById('fotoInput');
 const previewContainer = document.getElementById('preview-container');
 
 let comunidadActual = 'general';
+let filtroTop = false;
 let respondiendoA = null;
 let tokenCaptcha = null;
+let modeloNSFW = null;
+
+// --- CARGAR IA MODERADORA ---
+nsfwjs.load().then(m => { 
+    modeloNSFW = m; 
+    console.log("IA Lista para patrullar, broski");
+});
 
 // --- CONTROL DE ACCESO ---
 const modal = document.getElementById('modal-politicas');
@@ -21,191 +29,141 @@ document.getElementById('btn-aceptar').onclick = () => {
     modal.style.display = 'none';
 };
 
-// --- PREVIEW DE MEDIA (FOTO/VIDEO) ---
+// --- PREVIEW Y ANALISIS ---
 function mostrarPreview(inputElement) {
     previewContainer.innerHTML = "";
     const file = inputElement.files[0];
-
     if (file) {
-        if (file.size > 15 * 1024 * 1024) {
-            alert("¡Broski, el archivo es muy pesado! Máximo 15MB.");
-            inputElement.value = "";
-            return;
-        }
-
+        if (file.size > 15 * 1024 * 1024) { alert("¡15MB máximo!"); return; }
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = (e) => {
             previewContainer.style.display = "block";
-            const isVideo = file.type.startsWith('video/');
-            
-            previewContainer.innerHTML = isVideo 
-                ? `<video src="${e.target.result}" controls style="max-width:100%; border-radius:12px;"></video>`
-                : `<img src="${e.target.result}" style="max-width:100%; border-radius:12px;">`;
-            
+            const isVid = file.type.startsWith('video/');
+            previewContainer.innerHTML = isVid 
+                ? `<video src="${e.target.result}" id="temp-media" controls style="max-width:100%; border-radius:12px;"></video>` 
+                : `<img src="${e.target.result}" id="temp-media" style="max-width:100%; border-radius:12px;">`;
             previewContainer.innerHTML += `<b onclick="cancelarPreview()" style="position:absolute; top:10px; right:10px; cursor:pointer; background:rgba(0,0,0,0.8); color:white; padding:5px 10px; border-radius:50%;">✕</b>`;
         }
         reader.readAsDataURL(file);
     }
 }
+function cancelarPreview() { previewContainer.style.display = "none"; fotoInput.value = ""; }
 
-function cancelarPreview() {
-    previewContainer.style.display = "none";
-    previewContainer.innerHTML = "";
-    fotoInput.value = "";
+// --- IA: DETECTAR XXX ---
+async function esContenidoXXX() {
+    const media = document.getElementById('temp-media');
+    if (!modeloNSFW || !media || media.tagName === 'VIDEO') return false; 
+    const predicciones = await modeloNSFW.classify(media);
+    return predicciones.some(p => (p.className === 'Porn' || p.className === 'Hentai') && p.probability > 0.6);
 }
 
-// --- LÓGICA DE RESPUESTAS ---
-function prepararRespuesta(id) {
-    respondiendoA = id;
-    replyIndicator.innerHTML = `<span onclick="cancelarRespuesta()" style="color:var(--accent-red); cursor:pointer; font-weight:bold;">[Respondiendo a No.${id} ✖]</span>`;
-    input.placeholder = "Escribe tu respuesta...";
-    input.focus();
-    window.scrollTo({ top: document.getElementById('form-area').offsetTop - 100, behavior: 'smooth' });
+// --- NAVEGACIÓN ---
+function cambiarComunidad(c) {
+    comunidadActual = c; filtroTop = false;
+    actualizarTabs(c); leerSecretos();
+}
+function verTop() {
+    filtroTop = true; actualizarTabs('top'); leerSecretos();
+}
+function actualizarTabs(id) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(id)));
 }
 
-function cancelarRespuesta() {
-    respondiendoA = null;
-    replyIndicator.innerHTML = "";
-    input.placeholder = "¿Qué está pasando?";
-}
-
-function citarPost(id) {
-    input.value += `>>${id} `;
-    prepararRespuesta(id);
-}
-
-// --- RENDERIZADO ---
-function renderMedia(url) {
-    if(!url) return '';
-    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)/i);
-    return isVideo ? 
-        `<video src="${url}" controls preload="metadata" playsinline class="card-img"></video>` : 
-        `<img src="${url}" class="card-img" loading="lazy">`;
-}
-
-function escaparHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
+// --- RENDERIZADO CON FILTRO ---
 async function leerSecretos() {
-    // CAMBIO: Ordenamos por ultima_actividad para el sistema de Bumping
-    const { data, error } = await _supabase.from('secretos')
-        .select('*')
-        .eq('categoria', comunidadActual)
-        .order('ultima_actividad', { ascending: false });
+    let q = _supabase.from('secretos').select('*');
+    if (filtroTop) q = q.order('likes', { ascending: false });
+    else q = q.eq('categoria', comunidadActual).order('ultima_actividad', { ascending: false });
 
-    if (error || !data) return;
+    const { data, error } = await q;
+    if (error) return;
 
     const principal = data.filter(s => !s.padre_id);
     const respuestas = data.filter(s => s.padre_id);
 
     container.innerHTML = principal.map(s => {
-        const susRespuestas = respuestas.filter(r => r.padre_id === s.id).reverse();
-        return `
-            <div class="post-group">
-                <div class="card">
-                    <div class="post-header" style="margin-bottom:10px;">
-                        <span class="post-id" style="color:var(--text-dim); font-size:12px; cursor:pointer;" onclick="citarPost(${s.id})">
-                            ID #${s.id} <b style="color:var(--accent-red)">[+]</b>
-                        </span>
-                    </div>
-                    <p style="line-height:1.5; font-size:17px;">${escaparHTML(s.contenido)}</p>
-                    ${renderMedia(s.imagen_url)}
-                    <div class="footer-card">
-                        <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 RESPONDER</button>
-                        <button class="like-btn" onclick="reaccionar(${s.id})">🔥 ${s.likes || 0}</button>
-                    </div>
+        const susResp = respuestas.filter(r => r.padre_id === s.id).reverse();
+        return `<div class="post-group">
+            <div class="card">
+                <span class="post-id" onclick="citarPost(${s.id})">#${s.id} [+]</span>
+                <p>${escaparHTML(s.contenido)}</p>
+                ${renderMedia(s.imagen_url, s.es_nsfw, s.id)}
+                <div class="footer-card">
+                    <button class="reply-btn" onclick="prepararRespuesta(${s.id})">💬 RESPONDER</button>
+                    <button class="like-btn" onclick="reaccionar(${s.id})">🔥 ${s.likes || 0}</button>
                 </div>
-                ${susRespuestas.map(r => `
-                    <div class="reply-card">
-                        <div class="card" style="padding:15px 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                <span class="post-id" style="color:var(--text-dim); font-size:11px;" onclick="citarPost(${r.id})">#${r.id}</span>
-                                <span style="color:var(--accent-red); font-size:10px; font-weight:bold; text-transform:uppercase;">
-                                    >> Respondiendo a #${r.padre_id}
-                                </span>
-                            </div>
-                            <p style="font-size:15px;">
-                                ${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span style="color:var(--accent-red); font-weight:bold;">>>$1</span>')}
-                            </p>
-                            ${renderMedia(r.imagen_url)}
-                            <div class="footer-card" style="border:none; padding:0; margin-top:10px;">
-                                <button class="reply-btn" style="padding:5px 12px; font-size:11px;" onclick="prepararRespuesta(${s.id})">💬</button>
-                                <button class="like-btn" style="padding:5px 12px; font-size:11px;" onclick="reaccionar(${r.id})">🔥 ${r.likes || 0}</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
+            </div>
+            ${susResp.map(r => `<div class="reply-card"><div class="card">
+                <span class="post-id">#${r.id} >> #${r.padre_id}</span>
+                <p>${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<span style="color:var(--accent-red)">>>$1</span>')}</p>
+                ${renderMedia(r.imagen_url, r.es_nsfw, r.id)}
+                <div class="footer-card"><button class="like-btn" onclick="reaccionar(${r.id})">🔥 ${r.likes || 0}</button></div>
+            </div></div>`).join('')}
+        </div>`;
     }).join('');
 }
 
-// --- ACCIONES ---
-async function reaccionar(id) {
-    if (localStorage.getItem(`voto_${id}`)) return;
-    const { error } = await _supabase.rpc('incrementar_reaccion', { row_id: id, columna_nombre: 'likes' });
-    if (!error) { 
-        localStorage.setItem(`voto_${id}`, 'true'); 
-        leerSecretos(); 
-    }
+function renderMedia(url, nsfw, id) {
+    if(!url) return '';
+    const blur = nsfw ? 'media-censurada' : '';
+    const isVid = url.toLowerCase().match(/\.(mp4|webm|mov)/i);
+    let html = `<div class="media-wrapper" style="position:relative; margin:10px 0;">`;
+    if(nsfw) html += `<div class="nsfw-overlay" onclick="this.nextElementSibling.classList.toggle('media-revelada'); this.remove()">CONTENIDO NSFW - VER</div>`;
+    html += isVid ? `<video src="${url}" controls class="card-img ${blur}"></video>` : `<img src="${url}" class="card-img ${blur}" loading="lazy">`;
+    if(!nsfw) html += `<button class="report-btn" onclick="reportar(${id})">⚠️ Reportar XXX</button>`;
+    return html + `</div>`;
 }
 
+// --- ACCIONES ---
 btnEnviar.onclick = async () => {
-    if (!tokenCaptcha) { alert("Broski, falta el captcha."); return; }
+    if (!tokenCaptcha) { alert("Resuelve el captcha, broski"); return; }
     const texto = input.value.trim();
-    const file = fotoInput.files[0];
-    if (!texto && !file) return;
+    if (!texto && !fotoInput.files[0]) return;
 
     btnEnviar.disabled = true;
-    btnEnviar.innerText = "Subiendo...";
-    let urlFoto = null;
+    btnEnviar.innerText = "Analizando...";
+    
+    let esNSFW = await esContenidoXXX();
+    let cat = comunidadActual;
+    ['#tech','#musica','#paranormal','#xxx'].forEach(t => { if(texto.toLowerCase().includes(t)) cat = t.replace('#',''); });
+    if(texto.toLowerCase().includes('#xxx')) esNSFW = true;
 
     try {
-        if (file) {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}.${fileExt}`;
-            const { error: uploadError } = await _supabase.storage.from('imagenes').upload(fileName, file);
-            if (uploadError) throw uploadError;
-            const { data } = _supabase.storage.from('imagenes').getPublicUrl(fileName);
-            urlFoto = data.publicUrl;
+        let url = null;
+        if (fotoInput.files[0]) {
+            const f = fotoInput.files[0];
+            const n = `${Date.now()}.${f.name.split('.').pop()}`;
+            await _supabase.storage.from('imagenes').upload(n, f);
+            url = _supabase.storage.from('imagenes').getPublicUrl(n).data.publicUrl;
         }
-
-        const { error: insertError } = await _supabase.from('secretos').insert([{
-            contenido: texto,
-            categoria: comunidadActual,
-            padre_id: respondiendoA,
-            imagen_url: urlFoto,
-            likes: 0
+        await _supabase.from('secretos').insert([{ 
+            contenido: texto, categoria: cat, padre_id: respondiendoA, imagen_url: url, es_nsfw: esNSFW 
         }]);
-
-        if (insertError) throw insertError;
-
-        input.value = "";
-        cancelarPreview();
-        cancelarRespuesta();
-        if (window.turnstile) turnstile.reset();
-        tokenCaptcha = null;
-        btnEnviar.disabled = true;
+        input.value = ""; cancelarPreview(); cancelarRespuesta();
+        if(window.turnstile) turnstile.reset();
         leerSecretos();
-    } catch (err) {
-        alert("Error: " + err.message);
-    } finally {
-        btnEnviar.innerText = "Publicar";
-    }
+    } catch(e) { alert("Error"); }
+    finally { btnEnviar.innerText = "Publicar"; btnEnviar.disabled = false; }
 };
 
-function cambiarComunidad(c) {
-    comunidadActual = c;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(c)));
-    leerSecretos();
+async function reportar(id) {
+    if(localStorage.getItem('rep_'+id)) return;
+    const { error } = await _supabase.rpc('reportar_post', { row_id: id });
+    if(!error) { localStorage.setItem('rep_'+id, '1'); alert("Reportado"); leerSecretos(); }
 }
 
-function captchaResuelto(token) { 
-    tokenCaptcha = token; 
-    btnEnviar.disabled = false; 
+async function reaccionar(id) {
+    if(localStorage.getItem('v_'+id)) return;
+    await _supabase.rpc('incrementar_reaccion', { row_id: id, columna_nombre: 'likes' });
+    localStorage.setItem('v_'+id, '1'); leerSecretos();
 }
+
+// --- AUXILIARES ---
+function citarPost(id) { input.value += `>>${id} `; prepararRespuesta(id); }
+function prepararRespuesta(id) { respondiendoA = id; replyIndicator.innerHTML = `[Respondiendo a #${id} ✖]`; input.focus(); }
+function cancelarRespuesta() { respondiendoA = null; replyIndicator.innerHTML = ""; }
+function escaparHTML(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function captchaResuelto(t) { tokenCaptcha = t; btnEnviar.disabled = false; }
 function captchaExpirado() { tokenCaptcha = null; btnEnviar.disabled = true; }
 
 leerSecretos();
