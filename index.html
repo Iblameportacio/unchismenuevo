@@ -24,11 +24,21 @@
 
     <div id="modal-registro" class="modal-overlay" style="display:none;">
         <div class="modal-content">
-            <h3>Registrar Usuario</h3>
-            <input type="text" id="reg-user" placeholder="Nombre de usuario" class="custom-input">
+            <h3>Crear Cuenta VIP</h3>
+            <p style="font-size: 12px; color: var(--text-dim);">Usa un correo real para recuperar tu cuenta.</p>
+        
+            <input type="text" id="reg-user" placeholder="Nombre de usuario" class="custom-input"    >
+            <input type="email" id="reg-email" placeholder="Correo electrónico" class="custom-input">
             <input type="password" id="reg-pass" placeholder="Contraseña" class="custom-input">
-            <button onclick="registrarUsuario()" id="btn-reg">Crear Cuenta</button>
-            <button onclick="toggleRegistro()" style="background:none; border:none; color:gray; cursor:pointer;">Cerrar</button>
+        
+                <div id="captcha-registro" class="cf-turnstile" 
+                         data-sitekey="0x4AAAAAACWr0jixNQw4r2Li" 
+                         data-callback="captchaRegistroResuelto">
+                
+                 </div>
+
+            <button onclick="registrarUsuario()" id="btn-reg" disabled style="margin-top:15px;">Crear Cuenta</button>
+            <button onclick="toggleRegistro()" style="background:none; border:none; color:gray; cursor:pointer; display:block; width:100%; margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
@@ -42,9 +52,9 @@
         <main>
             <nav class="comunidades-nav">
                 <button class="tab-btn active" onclick="cambiarComunidad('general')">Inicio</button>
-                <button class="tab-btn" onclick="verTop()" style="color:#ff4500">TOP 🔥</button>
-                <button class="tab-btn" onclick="verMiPerfil()" style="color:#00ff88">MIS POSTS 📁</button>
-                <button class="tab-btn" onclick="toggleRegistro()" id="btn-login-nav">CUENTA 👤</button>
+                <button class="tab-btn" onclick="verTop()" style="color:#ff4500">TOP</button>
+                <button class="tab-btn" onclick="verMiPerfil()" style="color:#00ff88">MIS POSTS</button>
+                <button class="tab-btn" onclick="toggleRegistro()" id="btn-login-nav">CUENTA</button>
             </nav>
 
             <section id="form-area">
