@@ -28,60 +28,59 @@ async function inicializar() {
         if(btnNav) btnNav.innerText = `@${usuarioLogueado}`;
     }
 
-    // Fix Carga IA: Try/Catch para evitar el error "nsfwjs is not defined"
+    // Fix Carga IA
     try {
         if (typeof nsfwjs !== 'undefined') {
             modeloNSFW = await nsfwjs.load();
             console.log("IA Lista");
         }
     } catch (e) { console.error("IA en espera...", e); }
-}
-inicializar();
-
-// 2. REGISTRO CON EMAIL Y CAPTCHA
-function captchaRegistroResuelto(t) { 
-    tokenCaptchaReg = t; 
-    document.getElementById('btn-reg').disabled = false; 
+    
+    // Leer secretos después de cargar sesión
+    leerSecretos();
 }
 
-async function registrarUsuario() {
-    const user = document.getElementById('reg-user').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const pass = document.getElementById('reg-pass').value;
-
-    if (!tokenCaptchaReg) return alert("Resuelve el captcha de registro");
-    if (user.length < 3) return alert("Usuario muy corto");
-
-    const { error } = await _supabase.auth.signUp({
-        email: email,
-        password: pass,
-        options: { data: { username: user } }
-    });
-
-    if (error) alert(error.message);
-    else {
-        alert("¡Cuenta creada! Revisa tu email si activaste confirmación.");
-        location.reload();
-    }
+// 2. FUNCIONES DE RENDERIZADO (RESTAURADAS)
+function renderMedia(url, nsfw, id) {
+    if(!url) return '';
+    const blur = nsfw ? 'media-censurada' : '';
+    const isVid = url.toLowerCase().match(/\.(mp4|webm|mov)/i);
+    let html = `<div style="position:relative; margin:10px 0;">`;
+    if(nsfw) html += `<div class="nsfw-overlay" onclick="this.nextElementSibling.classList.remove('media-censurada'); this.remove()">NSFW - VER</div>`;
+    
+    const clickAction = nsfw ? '' : `onclick="abrirCine('${url}')" style="cursor:zoom-in"`;
+    html += isVid ? `<video src="${url}" controls class="card-img ${blur}"></video>` : `<img src="${url}" class="card-img ${blur}" ${clickAction}>`;
+    return html + `</div>`;
 }
 
-// 3. LEER PUBLICACIONES (IDENTIDAD Y PERFIL)
+function abrirCine(url) {
+    const lb = document.getElementById('lightbox');
+    const content = document.getElementById('lightbox-content');
+    if(!lb || !content) return;
+    const isVid = url.toLowerCase().match(/\.(mp4|webm|mov)/i);
+    content.innerHTML = isVid ? `<video src="${url}" controls autoplay style="max-width:100%"></video>` : `<img src="${url}" style="max-width:100%">`;
+    lb.style.display = 'flex';
+}
+
+// 3. LEER PUBLICACIONES
 async function leerSecretos(soloMios = false) {
     let q = _supabase.from('secretos').select('*');
     
     if (soloMios) q = q.eq('usuario_nombre', usuarioLogueado);
     else if (filtroTop) q = q.order('likes', { ascending: false });
-    else q = q.eq('categoria', comunidadActual).order('ultima_actividad', { ascending: false });
+    else q = q.eq('categoria', comunidadActual).order('created_at', { ascending: false });
 
-    const { data } = await q;
-    if (!data) return;
+    const { data, error } = await q;
+    if (error || !data) {
+        container.innerHTML = "No hay secretos aún.";
+        return;
+    }
 
     const principal = data.filter(s => !s.padre_id);
     const respuestas = data.filter(s => s.padre_id);
 
     container.innerHTML = principal.map(s => {
         const susResp = respuestas.filter(r => r.padre_id === s.id).reverse();
-        // Mostrar @username si existe, sino ID
         const autor = s.usuario_nombre && s.usuario_nombre !== 'Anónimo' ? `@${s.usuario_nombre}` : `#${s.id}`;
         
         return `<div class="post-group">
@@ -96,7 +95,7 @@ async function leerSecretos(soloMios = false) {
             </div>
             ${susResp.map(r => {
                 const autorR = r.usuario_nombre && r.usuario_nombre !== 'Anónimo' ? `@${r.usuario_nombre}` : `#${r.id}`;
-                return `<div class="reply-card">
+                return `<div class="reply-card" style="margin-left:20px; border-left: 2px solid red; padding-left:10px;">
                     <span class="reply-author">${autorR} >> #${r.padre_id}</span>
                     <p>${escaparHTML(r.contenido).replace(/>>(\d+)/g, '<b>>>$1</b>')}</p>
                     ${renderMedia(r.imagen_url, r.es_nsfw, r.id)}
@@ -106,12 +105,22 @@ async function leerSecretos(soloMios = false) {
     }).join('');
 }
 
-// 4. PUBLICAR Y LIKES
+// 4. PUBLICAR Y CAPTCHA
+function captchaResuelto(t) { 
+    tokenCaptchaPost = t; 
+    btnEnviar.disabled = false; 
+}
+
+function captchaRegistroResuelto(t) { 
+    tokenCaptchaReg = t; 
+    const btnReg = document.getElementById('btn-reg');
+    if(btnReg) btnReg.disabled = false; 
+}
+
 btnEnviar.onclick = async () => {
-    if (!tokenCaptchaPost) return alert("Captcha de post!");
+    if (!tokenCaptchaPost) return alert("Resuelve el captcha primero.");
     btnEnviar.disabled = true;
     
-    let esNSFW = await esContenidoXXX();
     const autorPost = usuarioLogueado || 'Anónimo';
 
     try {
@@ -128,45 +137,71 @@ btnEnviar.onclick = async () => {
             categoria: comunidadActual, 
             padre_id: respondiendoA, 
             imagen_url: url, 
-            es_nsfw: esNSFW,
-            usuario_nombre: autorPost // Guardar nombre
+            usuario_nombre: autorPost
         }]);
 
-        input.value = ""; cancelarPreview(); cancelarRespuesta();
+        input.value = ""; 
+        cancelarPreview(); 
+        cancelarRespuesta();
         if(window.turnstile) turnstile.reset();
+        tokenCaptchaPost = null;
+        btnEnviar.disabled = true;
         leerSecretos();
-    } catch(e) { alert("Error"); }
+    } catch(e) { alert("Error al publicar"); }
     finally { btnEnviar.disabled = false; }
 };
 
-async function reaccionar(id) {
-    if(localStorage.getItem('v_'+id)) return;
-    const btns = document.querySelectorAll(`button[onclick="reaccionar(${id})"]`);
-    btns.forEach(b => {
-        let n = parseInt(b.innerText.replace('🔥 ', '')) || 0;
-        b.innerHTML = `🔥 ${n + 1}`;
-        b.classList.add('like-active');
+// 5. REGISTRO Y SESIÓN
+async function registrarUsuario() {
+    const user = document.getElementById('reg-user').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-pass').value;
+
+    if (!tokenCaptchaReg) return alert("Resuelve el captcha de registro");
+
+    const { error } = await _supabase.auth.signUp({
+        email: email, password: pass,
+        options: { data: { username: user } }
     });
-    localStorage.setItem('v_'+id, '1');
-    await _supabase.rpc('incrementar_reaccion', { row_id: id, columna_nombre: 'likes' });
+
+    if (error) alert(error.message);
+    else {
+        alert("¡Cuenta creada!");
+        location.reload();
+    }
 }
 
-// FUNCIONES DE SOPORTE
-function verMiPerfil() { leerSecretos(true); }
-function toggleRegistro() { 
-    const m = document.getElementById('modal-registro');
-    m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+// 6. UTILIDADES
+function mostrarPreview(inputElement) {
+    const file = inputElement.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewContainer.style.display = "block";
+            previewContainer.innerHTML = `<img src="${e.target.result}" style="max-width:100%; border-radius:12px;">
+            <b onclick="cancelarPreview()" style="position:absolute; top:10px; right:10px; cursor:pointer; background:black; color:white; padding:5px 10px; border-radius:50%;">✕</b>`;
+        }
+        reader.readAsDataURL(file);
+    }
 }
-function captchaResuelto(t) { tokenCaptchaPost = t; btnEnviar.disabled = false; }
+function cancelarPreview() { previewContainer.style.display = "none"; fotoInput.value = ""; }
 function escaparHTML(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function citarPost(id) { input.value += `>>${id} `; prepararRespuesta(id); }
 function prepararRespuesta(id) { respondiendoA = id; replyIndicator.innerHTML = `[Resp #${id} ✖]`; input.focus(); }
 function cancelarRespuesta() { respondiendoA = null; replyIndicator.innerHTML = ""; }
+function toggleRegistro() { 
+    const m = document.getElementById('modal-registro');
+    m.style.display = m.style.display === 'none' ? 'flex' : 'none';
+}
 
-// MODAL POLÍTICAS (FIX CIERRE)
+// MODAL POLÍTICAS Y CIERRE
+const modalP = document.getElementById('modal-politicas');
+if (localStorage.getItem('politicasAceptadas')) modalP.style.display = 'none';
+
 document.getElementById('btn-aceptar').onclick = () => {
     localStorage.setItem('politicasAceptadas', 'true');
-    document.getElementById('modal-politicas').style.display = 'none';
+    modalP.style.display = 'none';
 };
 
-leerSecretos();
+// INICIAR TODO
+inicializar();
