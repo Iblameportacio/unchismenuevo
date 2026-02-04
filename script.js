@@ -2,7 +2,8 @@ const SUPABASE_URL = "https://ksqrflkejlpojqhyktwf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uFWqkx-ygAhFBS5Z_va8tg_qXi7z1QV";
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- ESTADO GLOBAL ---
+// --- 1. DECLARACIÓN DE VARIABLES (ESTADO GLOBAL) ---
+// Definimos todo al principio para evitar el error de "not defined"
 let tokenCaptcha = null;
 let comunidadActual = 'general';
 let filtroTop = false;
@@ -10,25 +11,33 @@ let respondiendoA = null;
 let procesandoLike = false; 
 let modeloNSFW = null;
 
-// --- 1. INICIALIZACIÓN ---
+const input = document.getElementById('secretoInput');
+const btnEnviar = document.getElementById('enviarBtn');
+const container = document.getElementById('secretos-container'); // Esta es la línea clave
+const replyIndicator = document.getElementById('reply-indicator');
+const fotoInput = document.getElementById('fotoInput');
+const previewContainer = document.getElementById('preview-container');
+
+// --- 2. INICIALIZACIÓN ---
 async function inicializar() {
-    leerSecretos();
+    if (container) leerSecretos();
     try {
         if (typeof nsfwjs !== 'undefined') {
             modeloNSFW = await nsfwjs.load();
-            console.log("IA Lista");
         }
-    } catch (e) { console.warn("IA no disponible, el sitio sigue."); }
+    } catch (e) { console.warn("IA en espera..."); }
 }
 inicializar();
 
-// --- 2. NAVEGACIÓN Y MODALES ---
+// --- 3. NAVEGACIÓN Y MODALES ---
 const modal = document.getElementById('modal-politicas');
-if (localStorage.getItem('politicasAceptadas')) modal.style.display = 'none';
+if (localStorage.getItem('politicasAceptadas')) {
+    if (modal) modal.style.display = 'none';
+}
 
 document.getElementById('btn-aceptar').onclick = () => {
     localStorage.setItem('politicasAceptadas', 'true');
-    modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
 };
 
 window.verTop = () => { filtroTop = true; actualizarTabs('top'); leerSecretos(); };
@@ -40,7 +49,7 @@ function actualizarTabs(tipo) {
     });
 }
 
-// --- 3. GESTIÓN MULTIMEDIA (PREVIEW Y RENDER) ---
+// --- 4. GESTIÓN MULTIMEDIA ---
 function mostrarPreview(inputElement) {
     const file = inputElement.files[0];
     if (file) {
@@ -68,8 +77,8 @@ function renderMedia(url, nsfw) {
     return html + `</div>`;
 }
 
-// --- 4. LÓGICA DE PUBLICACIÓN CON IA ---
-function cargarImagenLocal(file) {
+// --- 5. PUBLICACIÓN CON ESCANEO ---
+async function cargarImagenLocal(file) {
     return new Promise((res) => {
         const r = new FileReader();
         r.onload = (e) => res(e.target.result);
@@ -80,13 +89,12 @@ function cargarImagenLocal(file) {
 btnEnviar.onclick = async () => {
     if (!tokenCaptcha) return alert("Resuelve el captcha");
     btnEnviar.disabled = true;
-    btnEnviar.innerText = "Publicando...";
+    btnEnviar.innerText = "Subiendo...";
 
     try {
         let url = null, esNSFW = false;
         if (fotoInput.files[0]) {
             const f = fotoInput.files[0];
-            // Escaneo rápido antes de subir
             if (f.type.startsWith('image/') && modeloNSFW) {
                 const img = new Image();
                 img.src = await cargarImagenLocal(f);
@@ -106,18 +114,20 @@ btnEnviar.onclick = async () => {
         input.value = ""; cancelarPreview(); cancelarRespuesta();
         if(window.turnstile) turnstile.reset();
         tokenCaptcha = null; leerSecretos();
-    } catch(e) { alert("Error al subir"); }
+    } catch(e) { alert("Error al publicar"); }
     finally { btnEnviar.disabled = false; btnEnviar.innerText = "Publicar"; }
 };
 
-// --- 5. LECTURA Y LIKES ---
+// --- 6. LEER POSTS (FIJADO) ---
 async function leerSecretos() {
+    if (!container) return; // Seguridad extra
+    
     let q = _supabase.from('secretos').select('*');
     if (filtroTop) q = q.order('likes', { ascending: false });
     else q = q.eq('categoria', comunidadActual).order('ultima_actividad', { ascending: false });
 
-    const { data } = await q;
-    if (!data) return;
+    const { data, error } = await q;
+    if (error || !data) return;
 
     const hilos = data.filter(s => !s.padre_id);
     container.innerHTML = hilos.map(s => {
@@ -145,12 +155,12 @@ async function leerSecretos() {
     }).join('');
 }
 
+// --- 7. LIKES Y UTILIDADES ---
 async function reaccionar(id) {
     if (procesandoLike) return;
     procesandoLike = true;
     const yaLike = localStorage.getItem('v_' + id);
     const rpc = yaLike ? 'decrementar_reaccion' : 'incrementar_reaccion';
-    
     try {
         await _supabase.rpc(rpc, { row_id: id, columna_nombre: 'likes' });
         yaLike ? localStorage.removeItem('v_'+id) : localStorage.setItem('v_'+id, '1');
@@ -158,13 +168,12 @@ async function reaccionar(id) {
     } finally { procesandoLike = false; }
 }
 
-// --- UTILIDADES ---
 function citarPost(id) { input.value += `>>${id} `; prepararRespuesta(id); }
 function prepararRespuesta(id) { respondiendoA = id; replyIndicator.innerHTML = `[Resp #${id} ✖]`; input.focus(); }
 function cancelarRespuesta() { respondiendoA = null; replyIndicator.innerHTML = ""; }
 function cancelarPreview() { previewContainer.style.display = "none"; fotoInput.value = ""; }
 function escaparHTML(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function captchaResuelto(t) { tokenCaptcha = t; btnEnviar.disabled = false; }
+function captchaResuelto(t) { tokenCaptcha = t; if(btnEnviar) btnEnviar.disabled = false; }
 function abrirCine(url) {
     const lb = document.getElementById('lightbox');
     document.getElementById('lightbox-content').innerHTML = `<img src="${url}" style="max-width:100%">`;
