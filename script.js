@@ -2,8 +2,7 @@ const SUPABASE_URL = "https://ksqrflkejlpojqhyktwf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uFWqkx-ygAhFBS5Z_va8tg_qXi7z1QV";
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// --- 1. DECLARACIÓN DE VARIABLES (ESTADO GLOBAL) ---
-// Definimos todo al principio para evitar el error de "not defined"
+// --- 1. ESTADO GLOBAL ---
 let tokenCaptcha = null;
 let comunidadActual = 'general';
 let filtroTop = false;
@@ -11,9 +10,10 @@ let respondiendoA = null;
 let procesandoLike = false; 
 let modeloNSFW = null;
 
+// Referencias al DOM (Asegúrate de que existan en tu HTML)
 const input = document.getElementById('secretoInput');
 const btnEnviar = document.getElementById('enviarBtn');
-const container = document.getElementById('secretos-container'); // Esta es la línea clave
+const container = document.getElementById('secretos-container');
 const replyIndicator = document.getElementById('reply-indicator');
 const fotoInput = document.getElementById('fotoInput');
 const previewContainer = document.getElementById('preview-container');
@@ -29,19 +29,35 @@ async function inicializar() {
 }
 inicializar();
 
-// --- 3. NAVEGACIÓN Y MODALES ---
+// --- 3. NAVEGACIÓN CORREGIDA ---
 const modal = document.getElementById('modal-politicas');
-if (localStorage.getItem('politicasAceptadas')) {
-    if (modal) modal.style.display = 'none';
-}
+if (localStorage.getItem('politicasAceptadas') && modal) modal.style.display = 'none';
 
 document.getElementById('btn-aceptar').onclick = () => {
     localStorage.setItem('politicasAceptadas', 'true');
     if (modal) modal.style.display = 'none';
 };
 
-window.verTop = () => { filtroTop = true; actualizarTabs('top'); leerSecretos(); };
-window.verInicio = () => { filtroTop = false; actualizarTabs('inicio'); leerSecretos(); };
+// Esta función permite que el botón de Inicio funcione
+window.cambiarComunidad = (comunidad) => {
+    comunidadActual = comunidad;
+    filtroTop = false;
+    actualizarTabs('inicio');
+    leerSecretos();
+};
+
+window.verTop = () => { 
+    filtroTop = true; 
+    actualizarTabs('top'); 
+    leerSecretos(); 
+};
+
+window.verInicio = () => {
+    filtroTop = false;
+    comunidadActual = 'general';
+    actualizarTabs('inicio');
+    leerSecretos();
+};
 
 function actualizarTabs(tipo) {
     document.querySelectorAll('.tab-btn').forEach(b => {
@@ -77,7 +93,7 @@ function renderMedia(url, nsfw) {
     return html + `</div>`;
 }
 
-// --- 5. PUBLICACIÓN CON ESCANEO ---
+// --- 5. PUBLICACIÓN CON ESCANEO IA ---
 async function cargarImagenLocal(file) {
     return new Promise((res) => {
         const r = new FileReader();
@@ -118,10 +134,9 @@ btnEnviar.onclick = async () => {
     finally { btnEnviar.disabled = false; btnEnviar.innerText = "Publicar"; }
 };
 
-// --- 6. LEER POSTS (FIJADO) ---
+// --- 6. CARGAR POSTS ---
 async function leerSecretos() {
-    if (!container) return; // Seguridad extra
-    
+    if (!container) return; 
     let q = _supabase.from('secretos').select('*');
     if (filtroTop) q = q.order('likes', { ascending: false });
     else q = q.eq('categoria', comunidadActual).order('ultima_actividad', { ascending: false });
